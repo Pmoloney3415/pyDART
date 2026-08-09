@@ -7,7 +7,7 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
-from jax import Array, enable_x64
+from jax import Array
 
 from pydart.metrics.spherical_harmonics import (
     spherical_harmonic_coefficients,
@@ -71,41 +71,40 @@ def calculate_metrics(
     simulation_index: int = 0,
 ) -> MetricsResult:
     """Calculate power-density harmonics and global illumination metrics."""
-    with enable_x64():
-        deposition = deposition.astype(jnp.float64)
-        cell_areas = target.cell_areas.astype(jnp.float64)
-        radius = target.radius.astype(jnp.float64)
-        spherical_coordinates = target.spherical_coordinates.astype(jnp.float64)
-        incident_power = incident_power.astype(jnp.float64)
+    deposition = deposition.astype(jnp.float64)
+    cell_areas = target.cell_areas.astype(jnp.float64)
+    radius = target.radius.astype(jnp.float64)
+    spherical_coordinates = target.spherical_coordinates.astype(jnp.float64)
+    incident_power = incident_power.astype(jnp.float64)
 
-        power_density = deposition / cell_areas
-        solid_angles = cell_areas / radius**2
-        coefficients = spherical_harmonic_coefficients(
-            power_density,
-            spherical_coordinates,
-            solid_angles,
-            l_max,
-        )
-        power_by_l = jnp.sum(jnp.abs(coefficients) ** 2, axis=1)
-        normalized_power_by_l = power_by_l / power_by_l[0]
+    power_density = deposition / cell_areas
+    solid_angles = cell_areas / radius**2
+    coefficients = spherical_harmonic_coefficients(
+        power_density,
+        spherical_coordinates,
+        solid_angles,
+        l_max,
+    )
+    power_by_l = jnp.sum(jnp.abs(coefficients) ** 2, axis=1)
+    normalized_power_by_l = power_by_l / power_by_l[0]
 
-        deposited_power = jnp.sum(deposition)
-        total_area = jnp.sum(cell_areas)
-        mean_power_density = deposited_power / total_area
-        variance = (
-            jnp.sum((power_density - mean_power_density) ** 2 * cell_areas) / total_area
-        )
+    deposited_power = jnp.sum(deposition)
+    total_area = jnp.sum(cell_areas)
+    mean_power_density = deposited_power / total_area
+    variance = (
+        jnp.sum((power_density - mean_power_density) ** 2 * cell_areas) / total_area
+    )
 
-        return MetricsResult(
-            harmonic_coefficients=coefficients,
-            power_by_l=power_by_l,
-            normalized_power_by_l=normalized_power_by_l,
-            ell=jnp.arange(l_max + 1, dtype=jnp.int32),
-            deposited_power=deposited_power,
-            incident_power=incident_power,
-            deposited_fraction=deposited_power / incident_power,
-            mean_power_density=mean_power_density,
-            rms_nonuniformity=jnp.sqrt(variance) / mean_power_density,
-            simulation_index=simulation_index,
-            l_max=l_max,
-        )
+    return MetricsResult(
+        harmonic_coefficients=coefficients,
+        power_by_l=power_by_l,
+        normalized_power_by_l=normalized_power_by_l,
+        ell=jnp.arange(l_max + 1, dtype=jnp.int32),
+        deposited_power=deposited_power,
+        incident_power=incident_power,
+        deposited_fraction=deposited_power / incident_power,
+        mean_power_density=mean_power_density,
+        rms_nonuniformity=jnp.sqrt(variance) / mean_power_density,
+        simulation_index=simulation_index,
+        l_max=l_max,
+    )
