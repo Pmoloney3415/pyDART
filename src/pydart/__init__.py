@@ -7,7 +7,12 @@ from importlib.metadata import PackageNotFoundError, version
 # before any pyDART functions are traced or arrays are created.
 from jax import config as jax_config
 
-jax_config.update("jax_enable_x64", True)
+try:
+    jax_config.update("jax_enable_x64", True)
+except Exception as exc:  # pragma: no cover
+    raise RuntimeError(
+        "pyDART requires JAX 64-bit mode. Set JAX_ENABLE_X64=1 before importing JAX/pyDART."
+    ) from exc
 
 from pydart.config import PyDARTConfig, load_config
 from pydart.simulation import Simulation, initialise_simulation
