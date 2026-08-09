@@ -7,7 +7,7 @@ name = "pydart"
 version = "0.1.0"
 description = "Differentiable illumination ray tracing and beam optimization"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 authors = [
