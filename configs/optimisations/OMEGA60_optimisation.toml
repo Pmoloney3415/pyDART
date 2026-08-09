@@ -1,0 +1,58 @@
+[optimisation]
+index = 1
+simulation_config = "../simulations/OMEGA60_500um.toml"
+output_directory = "../../results/optimisations"
+maximum_iterations = 500
+objective_relative_tolerance = 1.0e-9
+projected_gradient_tolerance = 1.0e-6
+maximum_wall_time_seconds = 3600
+checkpoint_interval = 10
+history_plot_interval = 10
+save_best_simulation = true
+archive_previous_best_simulations = false
+
+[optimisation.restarts]
+number = 4
+include_base_design = true
+random_seed = 20260809
+
+[variables]
+# Put beam names here to hold all their variables fixed, for example
+# frozen_beams = ["beam_17", "beam_22"]
+frozen_beams = []
+
+[variables.power]
+enabled = true
+minimum_fraction_of_maximum = 0.5
+maximum_fraction_of_maximum = 1.0
+
+[variables.origin]
+enabled = false
+constraint = "bounded"
+maximum_angular_displacement_degrees = 5.0
+
+[variables.pointing]
+enabled = true
+constraint = "bounded"
+maximum_angular_displacement_degrees = 15.0
+
+[variables.spot]
+width_enabled = true
+force_circular = true
+minimum_width_x = 200e-6
+maximum_width_x = 500e-6
+minimum_width_y = 200e-6
+maximum_width_y = 500e-6
+rotation_enabled = false
+minimum_rotation_degrees = 0.0
+maximum_rotation_degrees = 180.0
+supergaussian_index_enabled = true
+minimum_supergaussian_index = 2.0
+maximum_supergaussian_index = 8.0
+
+[objective]
+rms_weight = 1.0
+deposited_power_weight = 0.25
+mode_weight_option = "decreasing"
+l1_mode_weight = 1.0
+mode_decrease_power = 1.0

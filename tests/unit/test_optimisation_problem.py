@@ -1,0 +1,157 @@
+from __future__ import annotations
+
+from dataclasses import replace
+from pathlib import Path
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+
+from pydart.config.optimisation_config import load_optimisation_config
+from pydart.optimisation import OptimisationProblem
+
+CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
+
+
+def _six_beam_problem(*, coarse: bool = False) -> OptimisationProblem:
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    if coarse:
+        simulation = replace(
+            config.simulation,
+            target=replace(
+                config.simulation.target,
+                n_polar=12,
+                n_azimuthal=24,
+            ),
+            metrics=replace(config.simulation.metrics, l_max=4),
+        )
+        config = replace(config, simulation=simulation)
+    return OptimisationProblem(config)
+
+
+def test_layout_is_normalized_and_initial_design_preserves_baseline() -> None:
+    problem = _six_beam_problem()
+
+    assert problem.n_parameters > 0
+    assert problem.initial_parameters.shape == (problem.n_parameters,)
+    assert bool(jnp.all(problem.initial_parameters >= problem.lower_bounds))
+    assert bool(jnp.all(problem.initial_parameters <= problem.upper_bounds))
+    assert len(problem.parameter_names) == problem.n_parameters
+
+    decoded = problem.beam_parameters(problem.initial_parameters)
+    baseline = problem.base_simulation.beams
+    np.testing.assert_allclose(
+        decoded.physical_origins, baseline.physical_origins, atol=1e-6
+    )
+    np.testing.assert_allclose(
+        decoded.power_fractions_of_maximum,
+        baseline.power_fractions_of_maximum,
+    )
+    np.testing.assert_allclose(decoded.spot_widths, baseline.spot_widths)
+    rebuilt = problem.simulation(problem.initial_parameters).beams
+    np.testing.assert_allclose(rebuilt.directions, baseline.directions, atol=2e-6)
+
+
+def test_bounds_decode_to_physical_scalar_bounds() -> None:
+    problem = _six_beam_problem()
+    low = problem.beam_parameters(problem.lower_bounds)
+    high = problem.beam_parameters(problem.upper_bounds)
+    variables = problem.config.variables
+
+    np.testing.assert_allclose(
+        low.power_fractions_of_maximum,
+        variables.power.minimum_fraction_of_maximum,
+    )
+    np.testing.assert_allclose(
+        high.power_fractions_of_maximum,
+        variables.power.maximum_fraction_of_maximum,
+    )
+    np.testing.assert_allclose(
+        low.spot_widths,
+        np.broadcast_to(
+            [variables.spot.minimum_width_x, variables.spot.minimum_width_y],
+            low.spot_widths.shape,
+        ),
+    )
+    np.testing.assert_allclose(
+        high.spot_widths,
+        np.broadcast_to(
+            [variables.spot.maximum_width_x, variables.spot.maximum_width_y],
+            high.spot_widths.shape,
+        ),
+    )
+    np.testing.assert_allclose(
+        low.spot_rotations, np.deg2rad(variables.spot.minimum_rotation_degrees)
+    )
+    np.testing.assert_allclose(
+        high.spot_rotations, np.deg2rad(variables.spot.maximum_rotation_degrees)
+    )
+    np.testing.assert_allclose(
+        low.supergaussian_indices,
+        variables.spot.minimum_supergaussian_index,
+    )
+    np.testing.assert_allclose(
+        high.supergaussian_indices,
+        variables.spot.maximum_supergaussian_index,
+    )
+
+
+def test_origin_motion_transports_unadjusted_pointing() -> None:
+    problem = _six_beam_problem()
+    design = problem.initial_parameters
+    origin = problem.parameter_blocks[0]
+    moved_direction = jnp.asarray([0.2, -0.3, 0.9327379])
+    moved_direction = moved_direction / jnp.linalg.norm(moved_direction)
+    moved_values = (moved_direction + 1.0) / 2.0
+    design = design.at[origin.start : origin.start + 3].set(moved_values)
+
+    decoded = problem.beam_parameters(design)
+    origin_direction = decoded.physical_origins[0] / jnp.linalg.norm(
+        decoded.physical_origins[0]
+    )
+    pointing_direction = decoded.pointing_locations[0] / jnp.linalg.norm(
+        decoded.pointing_locations[0]
+    )
+
+    np.testing.assert_allclose(origin_direction, moved_direction, atol=1e-6)
+    np.testing.assert_allclose(pointing_direction, moved_direction, atol=1e-6)
+
+
+def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    unfrozen_problem = OptimisationProblem(config)
+    variables = replace(config.variables, frozen_beams=("beam_1",))
+    problem = OptimisationProblem(replace(config, variables=variables))
+
+    decoded = problem.beam_parameters(problem.lower_bounds)
+    baseline = problem.base_simulation.beams
+
+    assert problem.n_parameters < unfrozen_problem.n_parameters
+    assert not any(name.startswith("beam_1.") for name in problem.parameter_names)
+    np.testing.assert_allclose(
+        decoded.physical_origins[0], baseline.physical_origins[0]
+    )
+    np.testing.assert_allclose(decoded.spot_widths[0], baseline.spot_widths[0])
+    np.testing.assert_allclose(
+        decoded.power_fractions_of_maximum[0],
+        baseline.power_fractions_of_maximum[0],
+    )
+
+
+def test_objective_components_sum_to_finite_value_with_gradient() -> None:
+    problem = _six_beam_problem(coarse=True)
+
+    (value, terms), gradient = jax.value_and_grad(
+        problem.objective_with_aux, has_aux=True
+    )(problem.initial_parameters)
+
+    np.testing.assert_allclose(
+        value,
+        terms.rms_contribution
+        + terms.mode_contribution
+        + terms.deposition_contribution,
+    )
+    assert bool(jnp.isfinite(value))
+    assert gradient.shape == (problem.n_parameters,)
+    assert bool(jnp.all(jnp.isfinite(gradient)))
+    assert float(jnp.linalg.norm(gradient)) > 0.0

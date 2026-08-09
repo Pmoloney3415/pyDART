@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    env:
+      JAX_ENABLE_X64: "1"
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the locked project environment
+        run: uv sync --locked
+
+      - name: Check formatting and lint
+        run: |
+          uv run ruff format --check src tests examples
+          uv run ruff check src tests examples
+
+      - name: Run tests
+        run: |
+          uv run pytest \
+            --cov=pydart \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=80
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.13'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: python-3.13
+          fail_ci_if_error: false
+          use_oidc: true
+
+  build:
+    name: Build and inspect distributions
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Build the wheel and source distribution
+        run: uv build --no-sources
+
+      - name: Check distribution metadata
+        run: uvx twine check dist/*
+
+      - name: Smoke-test the built wheel
+        run: |
+          wheel=$(find dist -name '*.whl' -print -quit)
+          uv run --no-project --with "$wheel" -- python -c "import pydart; print(pydart.__version__)"
+          uv run --no-project --with "$wheel" -- pydart-simulate --help
+          uv run --no-project --with "$wheel" -- pydart-optimise --help

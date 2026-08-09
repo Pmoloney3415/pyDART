@@ -1,0 +1,1010 @@
+# ============================================================
+# pyDART simulation input deck
+# ============================================================
+
+[simulation]
+index = 1
+# Note that the simulation will create a 'simulation_{index}/'...
+# ...folder within the output directory, where results files...
+# ...will be saved.
+output_directory = "results/simulations/"
+
+save_deposition_data = true
+save_metrics = true
+plot_data = true
+plot_dpi = 200
+surface_quadrature_order = 1
+visibility_smoothing_epsilon = 0.05
+
+[metrics]
+l_max = 20
+
+
+# ============================================================
+# Target / spherical surface mesh
+# ============================================================
+
+[target]
+radius = 5.0e-4          # m
+n_polar = 128            # theta cells
+n_azimuthal = 256        # phi cells
+numerical_origin_radius_factor = 10.0
+
+
+# ============================================================
+# Laser system
+# ============================================================
+
+[laser]
+n_beams = 60
+total_incident_power = 25.0e12     # W
+
+
+# ============================================================
+# Individual beams
+#
+# Beam origin and pointing locations are given in the coordinate
+# system specified by `origin_coordinate_system` and
+# `pointing_coordinate_system` separately. Spherical coordinates are
+# ordered (r, phi, theta), with angles in radians.
+# `maximum_power_fraction` allocates facility capacity and must sum to 1.
+# `power_fraction_of_maximum` sets the beam operating fraction in [0, 1].
+#
+# ============================================================
+
+[[beam]]
+name = "beam_17"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.314159265, 0.373849526]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,         0.0]          # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+[[beam]]
+name = "beam_22"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.942477796, 0.373849526]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,         0.0]          # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15             # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                    # m
+width_y = 3.58e-4                    # m
+supergaussian_index = 5.2
+rotation = 0.0
+[[beam]]
+name = "beam_46"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.570796327, 0.373849526]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+[[beam]]
+name = "beam_56"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.199114858, 0.373849526]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_61"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.827433388, 0.373849526]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_11"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.942477796, 0.733387352]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_26"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.570796327, 0.733387352]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_31"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.314159265, 0.733387352]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_55"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.827433388, 0.733387352]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_68"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.199114858, 0.733387352]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_10"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.103672558, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_13"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.360309619, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_20"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.524645973, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_28"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.731991088, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_33"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.152964504, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_48"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.98862815, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_52"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.409601565, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_58"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.61694668, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_65"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 3.037920096, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_66"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.781283035, 1.027126265]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_15"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.533023553, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_24"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.161342084, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_32"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.723613508, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_36"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.351932038, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_37"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.095294977, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_40"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -3.046297676, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_41"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.789660615, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_47"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.417979146, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_59"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.980250569, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_60"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.6085691, 1.418080017]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_16"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.723613508, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_18"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.351932039, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_27"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.533023554, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_34"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.161342084, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_35"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.095294977, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_42"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 3.046297676, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_49"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.980250569, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_53"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.6085691, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_63"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.417979146, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_67"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.789660615, 1.723512636]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_14"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.152964504, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_21"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.524645973, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_23"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.731991088, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_38"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.360309619, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_39"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.103672557, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_43"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -1.781283034, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_44"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -3.037920096, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_51"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.61694668, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_57"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.409601565, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_69"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.98862815, 2.114466389]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_12"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.314159265, 2.408205302]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_29"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.942477796, 2.408205302]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_50"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.570796327, 2.408205302]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_54"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.199114857, 2.408205302]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_62"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.827433388, 2.408205302]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_19"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -0.942477796, 2.767917661]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_25"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 1.570796327, 2.767917661]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_30"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 0.314159265, 2.767917661]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_45"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, 2.827433388, 2.767917661]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
+
+[[beam]]
+name = "beam_64"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin =   [3.3, -2.199114857, 2.767917661]  # r [m], phi [rad], theta [rad]
+pointing = [0.0, 0.0,        0.0]           # x, y, z [m]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15                        # rad/s
+[beam.spot]
+shape = "circular"
+width_x = 3.58e-4                           # m
+width_y = 3.58e-4                           # m
+supergaussian_index = 5.2
+rotation = 0.0
