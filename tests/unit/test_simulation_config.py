@@ -19,7 +19,14 @@ from pydart.config.simulation_validation import validate_simulation_config
 CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "simulations"
 
 
-@pytest.mark.parametrize("filename", ["OMEGA60_500um.toml", "six_beam_500um.toml"])
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "OMEGA60_500um.toml",
+        "generic_60_beam_500um.toml",
+        "six_beam_500um.toml",
+    ],
+)
 def test_bundled_simulation_configs_load(filename: str) -> None:
     config = load_config(CONFIG_DIRECTORY / filename)
 

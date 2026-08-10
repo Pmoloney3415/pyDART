@@ -1,0 +1,989 @@
+# Generic randomized 60-beam facility baseline.
+# Port angles were sampled uniformly on the sphere with xorshift32 seed 20260810.
+
+[simulation]
+index = 60
+output_directory = "results/simulations/"
+save_deposition_data = true
+save_metrics = true
+plot_data = true
+plot_dpi = 200
+surface_quadrature_order = 1
+visibility_smoothing_epsilon = 0.00
+
+[metrics]
+l_max = 20
+
+[target]
+radius = 5.0e-4
+n_polar = 128
+n_azimuthal = 256
+numerical_origin_radius_factor = 10.0
+
+[laser]
+n_beams = 60
+total_incident_power = 25.0e12
+
+# Spherical locations are ordered (r, phi, theta). Each beam has one sixtieth
+# of the facility power capacity and initially operates at full power.
+
+[[beam]]
+name = "beam_1"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.447220419, 1.526049315]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_2"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.602128245, 1.143480327]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_3"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.279086827, 0.863864048]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_4"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -1.685702352, 1.471472881]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_5"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.667925414, 0.376427570]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_6"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.880863921, 2.008089006]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_7"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.441595629, 1.760943510]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_8"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 1.393290044, 2.488368966]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_9"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.678724990, 1.733640907]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_10"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -1.701550609, 1.944927754]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_11"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.591708114, 2.498956324]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_12"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -1.035988136, 1.274579379]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_13"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.262259369, 2.123644723]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_14"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.019685018, 1.497990655]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_15"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.916070188, 2.851346831]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_16"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 1.437781021, 2.451648619]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_17"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.840084731, 1.025793634]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_18"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.781692111, 2.253430452]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_19"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.107524141, 2.315846975]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_20"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -1.967322092, 1.458912133]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_21"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.895230110, 2.063427877]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_22"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 3.090778384, 2.698019731]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_23"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.129318550, 0.586022771]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_24"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.605170619, 1.359497578]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_25"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.267213559, 2.101720161]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_26"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.057678179, 1.429717625]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_27"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.398226225, 2.149320120]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_28"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.291404709, 0.986496510]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_29"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.169983362, 2.421053446]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_30"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -3.014030337, 0.673297101]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_31"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.739900137, 2.202396866]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_32"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.453038331, 1.263054785]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_33"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.557525102, 1.723910337]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_34"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.860924860, 1.735198636]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_35"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 1.952583293, 2.081178719]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_36"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.135109160, 0.629885938]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_37"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.574881768, 2.599019084]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_38"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.106938698, 1.044885026]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_39"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.989964911, 1.030399902]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_40"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.094910169, 0.306107572]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_41"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.189563513, 1.253010716]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_42"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 1.668359593, 0.444156201]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_43"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.598530808, 1.916328616]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_44"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -1.320582095, 1.763253090]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_45"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.896305528, 1.407653716]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_46"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 3.021837817, 0.719188107]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_47"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 1.130858968, 2.412229376]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_48"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.596375611, 1.977083339]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_49"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.261682030, 2.201023676]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_50"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -1.952799794, 0.492350965]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_51"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.852865878, 0.797146103]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_52"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.993295728, 1.790464574]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_53"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -1.801556729, 1.409467684]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_54"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 3.010103120, 2.240921978]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_55"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.397470447, 2.457071194]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_56"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 0.583742107, 0.714889726]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_57"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 2.047228641, 0.510117071]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_58"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -0.038419206, 1.984622107]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_59"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, 1.857876666, 1.354088910]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_60"
+origin_coordinate_system = "spherical"
+pointing_coordinate_system = "cartesian"
+origin = [1.0, -2.323835752, 2.195283617]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.016666666666666666
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+

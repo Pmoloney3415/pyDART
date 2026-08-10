@@ -16,7 +16,12 @@ SIMULATION_DIRECTORY = Path(__file__).parents[2] / "configs" / "simulations"
 
 
 @pytest.mark.parametrize(
-    "filename", ["OMEGA60_optimisation.toml", "six_beam_design.toml"]
+    "filename",
+    [
+        "OMEGA60_optimisation.toml",
+        "generic_60_beam_design.toml",
+        "six_beam_design.toml",
+    ],
 )
 def test_bundled_optimisation_configs_load(filename: str) -> None:
     config = load_optimisation_config(CONFIG_DIRECTORY / filename)
