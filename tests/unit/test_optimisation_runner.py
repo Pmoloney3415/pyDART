@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -63,8 +64,16 @@ def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
     assert len(result.history) >= 1
     checkpoint_path = output / f"optimisation_checkpoint_{optimisation_index}.h5"
     summary_path = output / f"optimisation_summary_{optimisation_index}.json"
+    timing_path = output / f"optimisation_timing_{optimisation_index}.json"
     assert checkpoint_path.is_file()
     assert summary_path.is_file()
+    assert timing_path.is_file()
+    timing = json.loads(timing_path.read_text(encoding="utf-8"))
+    assert timing["total_seconds"] > 0.0
+    assert timing["sections"]["optimisation_compute"]["calls"] > 0
+    used_configs = output / "used_configs"
+    assert (used_configs / "optimisation.toml").is_file()
+    assert (used_configs / "simulation.toml").is_file()
 
     history, restarts, best, elapsed = load_optimisation_checkpoint(checkpoint_path)
     assert len(history) == len(result.history)

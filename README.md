@@ -62,6 +62,9 @@ uv run pydart-simulate configs/simulations/six_beam_500um.toml
 Results are written beneath the output directory selected in the deck. The
 `configs/optimisations` directory contains corresponding optimisation decks;
 these are research-scale examples and may run for substantially longer.
+Every command-line run writes a JSON timing summary and preserves its input
+TOML deck under the run's `used_configs/` directory. Optimisation runs preserve
+both the optimisation deck and its referenced simulation deck.
 
 The Python API exposes the same workflow:
 

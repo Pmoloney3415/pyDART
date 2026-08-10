@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import shutil
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
+from pydart.io.run_artifacts import (
+    Timer,
+    copy_used_config,
+    save_timing_summary,
+)
 from pydart.optimisation.persistence import (
     load_optimisation_checkpoint,
     optimisation_output_directory,
@@ -68,6 +73,7 @@ class OptimisationResult:
     history: tuple[IterationRecord, ...]
     restart_results: tuple[RestartResult, ...]
     best_record: IterationRecord
+    timing: dict | None = None
 
     @property
     def best_design(self) -> np.ndarray:
@@ -96,6 +102,7 @@ class OptimisationRunner:
         self._prior_elapsed = 0.0
         self._resume_design: np.ndarray | None = None
         self._restart_index_offset = 0
+        self._timer = Timer()
         if resume_checkpoint is not None:
             history, restart_results, best, elapsed = load_optimisation_checkpoint(
                 resume_checkpoint
@@ -129,8 +136,21 @@ class OptimisationRunner:
                 "Running pyDART optimization requires the optional 'scipy' dependency."
             ) from error
 
+        self._timer = Timer()
         self._start_time = time.monotonic()
-        evaluator = _JaxObjectiveEvaluator(self.problem)
+        output_directory = optimisation_output_directory(self.problem)
+        used_configs = output_directory / "used_configs"
+        self._timer.start("io")
+        copy_used_config(
+            self.problem.config.source_path,
+            used_configs / "optimisation.toml",
+        )
+        copy_used_config(
+            self.problem.config.run.simulation_config,
+            used_configs / "simulation.toml",
+        )
+        self._timer.stop("io")
+        evaluator = _JaxObjectiveEvaluator(self.problem, self._timer)
         starts = self._starting_designs()
         stopped_for_time = False
 
@@ -242,7 +262,20 @@ class OptimisationRunner:
             best_record=self._best_record,
         )
         self._persist(checkpoint=True, history_plot=True, snapshot=True)
+        self._timer.start("io")
         save_optimisation_summary(result)
+        self._timer.stop("io")
+        timing = self._timer.summary()
+        result = replace(result, timing=timing)
+        save_timing_summary(
+            timing,
+            output_directory
+            / f"optimisation_timing_{self.problem.config.run.index}.json",
+            metadata={
+                "run_type": "optimisation",
+                "optimisation_index": self.problem.config.run.index,
+            },
+        )
         return result
 
     def _record(
@@ -292,6 +325,7 @@ class OptimisationRunner:
             return
         output_directory = optimisation_output_directory(self.problem)
         if checkpoint:
+            self._timer.start("io")
             save_optimisation_checkpoint(
                 self.problem,
                 self._history,
@@ -299,15 +333,18 @@ class OptimisationRunner:
                 self._restart_results,
                 self._elapsed(),
             )
+            self._timer.stop("io")
         if history_plot:
             path = output_directory / (
                 f"optimisation_history_{self.problem.config.run.index}.png"
             )
+            self._timer.start("plotting")
             save_optimisation_history_plot(
                 self._history,
                 path,
                 dpi=self.problem.config.simulation.simulation.plot_dpi,
             )
+            self._timer.stop("plotting")
         if (
             snapshot
             and self._best_changed_since_snapshot
@@ -315,25 +352,31 @@ class OptimisationRunner:
         ):
             best_directory = output_directory / "best_simulation"
             if best_directory.exists():
+                self._timer.start("io")
                 shutil.rmtree(best_directory)
+                self._timer.stop("io")
+            self._timer.start("best_simulation_output")
             best_snapshot_directory = save_simulation_snapshot(
                 self.problem,
                 self._best_record,
                 best_directory,
                 save_plots=self.problem.config.run.save_simulation_plots,
             )
+            self._timer.stop("best_simulation_output")
             if (
                 self.problem.config.run.archive_previous_best_simulations
                 and self._last_archived_history_index != self._best_record.history_index
             ):
                 archive_root = output_directory / "previous_best_simulations"
                 archive_directory = archive_root / best_snapshot_directory.name
+                self._timer.start("io")
                 archive_root.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(
                     best_snapshot_directory,
                     archive_directory,
                     dirs_exist_ok=True,
                 )
+                self._timer.stop("io")
                 self._last_archived_history_index = self._best_record.history_index
             self._best_changed_since_snapshot = False
 
@@ -368,7 +411,7 @@ class OptimisationRunner:
 class _JaxObjectiveEvaluator:
     """Cache the most recent device evaluation for SciPy and callbacks."""
 
-    def __init__(self, problem: OptimisationProblem):
+    def __init__(self, problem: OptimisationProblem, timer: Timer):
         self._function = jax.jit(
             jax.value_and_grad(problem.objective_with_aux, has_aux=True)
         )
@@ -376,6 +419,7 @@ class _JaxObjectiveEvaluator:
         self._cached_result: tuple[float, np.ndarray, ObjectiveTerms] | None = None
         self.total_evaluations = 0
         self.restart_evaluations = 0
+        self._timer = timer
 
     def reset_restart_count(self) -> None:
         self.restart_evaluations = 0
@@ -387,8 +431,10 @@ class _JaxObjectiveEvaluator:
         ):
             assert self._cached_result is not None
             return self._cached_result
+        self._timer.start("optimisation_compute")
         (value, terms), gradient = self._function(jnp.asarray(design))
         value, gradient, terms = jax.device_get((value, gradient, terms))
+        self._timer.stop("optimisation_compute")
         result = (
             float(value),
             np.asarray(gradient, dtype=np.float64),

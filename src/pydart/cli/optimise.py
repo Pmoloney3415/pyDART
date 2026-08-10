@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from pydart.config import load_optimisation_config
+from pydart.io.run_artifacts import format_timing_summary
 from pydart.optimisation import OptimisationProblem, OptimisationRunner
 
 
@@ -32,6 +33,8 @@ def main(argv: list[str] | None = None) -> int:
         f"{result.best_record.deposited_capacity_fraction:.8e}"
     )
     print(result.message)
+    if result.timing is not None:
+        print(format_timing_summary(result.timing))
     return 0 if result.success else 1
 
 
