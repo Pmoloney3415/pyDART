@@ -45,9 +45,7 @@ def test_simulation_cli_runs_configured_simulation(
     assert (simulation_directory / "used_configs" / "simulation.toml").is_file()
 
 
-def test_simulation_cli_honours_configured_outputs(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_simulation_cli_honours_configured_outputs(monkeypatch, tmp_path: Path) -> None:
     config_path = tmp_path / "simulation.toml"
     config_path.write_text("# test configuration\n", encoding="utf-8")
     output_directory = tmp_path / "results"

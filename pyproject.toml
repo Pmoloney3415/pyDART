@@ -55,6 +55,7 @@ pydart-optimise = "pydart.cli.optimise:main"
 
 [dependency-groups]
 dev = [
+    "pre-commit",
     "pytest",
     "pytest-cov",
     "ruff",
