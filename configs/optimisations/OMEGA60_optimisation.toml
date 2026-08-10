@@ -2,18 +2,18 @@
 index = 1
 simulation_config = "../simulations/OMEGA60_500um.toml"
 output_directory = "../../results/optimisations"
-maximum_iterations = 500
+maximum_iterations = 750
 objective_relative_tolerance = 1.0e-9
 projected_gradient_tolerance = 1.0e-6
-maximum_wall_time_seconds = 3600
-checkpoint_interval = 10
-history_plot_interval = 10
+maximum_wall_time_seconds = 10000
+checkpoint_interval = 25
+history_plot_interval = 25
 save_best_simulation = true
-save_simulation_plots = false
-archive_previous_best_simulations = false
+save_simulation_plots = true
+archive_previous_best_simulations = true
 
 [optimisation.restarts]
-number = 4
+number = 8
 include_base_design = true
 random_seed = 20260809
 
@@ -24,7 +24,7 @@ frozen_beams = []
 
 [variables.power]
 enabled = true
-minimum_fraction_of_maximum = 0.5
+minimum_fraction_of_maximum = 0.0
 maximum_fraction_of_maximum = 1.0
 
 [variables.origin]
@@ -33,18 +33,18 @@ constraint = "bounded"
 maximum_angular_displacement_degrees = 5.0
 
 [variables.pointing]
-enabled = true
+enabled = false
 constraint = "bounded"
 maximum_angular_displacement_degrees = 15.0
 
 [variables.spot]
 width_enabled = true
-force_circular = true
+force_circular = false
 minimum_width_x = 200e-6
-maximum_width_x = 500e-6
+maximum_width_x = 600e-6
 minimum_width_y = 200e-6
-maximum_width_y = 500e-6
-rotation_enabled = false
+maximum_width_y = 600e-6
+rotation_enabled = true
 minimum_rotation_degrees = 0.0
 maximum_rotation_degrees = 180.0
 supergaussian_index_enabled = true
