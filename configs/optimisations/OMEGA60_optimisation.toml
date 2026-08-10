@@ -9,6 +9,7 @@ maximum_wall_time_seconds = 3600
 checkpoint_interval = 10
 history_plot_interval = 10
 save_best_simulation = true
+save_simulation_plots = false
 archive_previous_best_simulations = false
 
 [optimisation.restarts]

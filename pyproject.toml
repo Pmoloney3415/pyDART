@@ -38,6 +38,12 @@ dependencies = [
     "scipy",
 ]
 
+[project.optional-dependencies]
+postprocessing = [
+    "imageio>=2.37",
+    "imageio-ffmpeg>=0.6",
+]
+
 [project.urls]
 Homepage = "https://github.com/Pmoloney3415/pyDART"
 Repository = "https://github.com/Pmoloney3415/pyDART"
