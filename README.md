@@ -62,6 +62,9 @@ uv run pydart-simulate configs/simulations/six_beam_500um.toml
 Results are written beneath the output directory selected in the deck. The
 `configs/optimisations` directory contains corresponding optimisation decks;
 these are research-scale examples and may run for substantially longer.
+Every command-line run writes a JSON timing summary and preserves its input
+TOML deck under the run's `used_configs/` directory. Optimisation runs preserve
+both the optimisation deck and its referenced simulation deck.
 
 The Python API exposes the same workflow:
 
@@ -103,7 +106,9 @@ dependencies. After changing `pyproject.toml`, update it deliberately with
 `uv lock`.
 
 ```shell
+uv run pre-commit install
 uv lock --check
+uv run ruff format --check src tests examples
 uv run ruff check src tests examples
 uv run pytest --cov=pydart --cov-report=term-missing --cov-fail-under=80
 uv build --no-sources
