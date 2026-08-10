@@ -21,6 +21,7 @@ class OptimisationRunConfig:
     checkpoint_interval: int
     history_plot_interval: int
     save_best_simulation: bool
+    save_simulation_plots: bool
     archive_previous_best_simulations: bool
 
 
@@ -131,6 +132,7 @@ def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
         checkpoint_interval=int(run_data.get("checkpoint_interval", 10)),
         history_plot_interval=int(run_data.get("history_plot_interval", 10)),
         save_best_simulation=bool(run_data.get("save_best_simulation", True)),
+        save_simulation_plots=bool(run_data.get("save_simulation_plots", True)),
         archive_previous_best_simulations=bool(
             run_data.get("archive_previous_best_simulations", False)
         ),

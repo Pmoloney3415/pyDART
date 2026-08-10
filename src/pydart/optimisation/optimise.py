@@ -320,6 +320,7 @@ class OptimisationRunner:
                 self.problem,
                 self._best_record,
                 best_directory,
+                save_plots=self.problem.config.run.save_simulation_plots,
             )
             if (
                 self.problem.config.run.archive_previous_best_simulations

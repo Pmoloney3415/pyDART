@@ -25,6 +25,9 @@ under `previous_best_simulations/` whenever a checkpoint observes a new global
 best. This is useful for small design studies; larger production runs will
 usually leave it disabled. `best_simulation/` is always the stable location of
 the most recently checkpointed global best when `save_best_simulation = true`.
+Snapshot HDF5 and JSON data are always written when best-simulation saving is
+enabled. Set `save_simulation_plots = false` to omit the key-plot PNGs while
+retaining that data for later plotting. The setting defaults to `true`.
 An interrupted run can be restarted from its best saved design with
 `pydart-optimise CONFIG --resume CHECKPOINT`. This preserves the recorded
 history, but starts a fresh L-BFGS approximation because SciPy does not expose

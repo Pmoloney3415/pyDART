@@ -224,10 +224,11 @@ def save_simulation_snapshot(
     problem: OptimisationProblem,
     record: IterationRecord,
     output_directory: str | Path,
+    *,
+    save_plots: bool = True,
 ) -> Path:
-    """Save full simulation data, metrics and key plots for one design."""
+    """Save full simulation data and metrics, optionally including key plots."""
     from pydart.io.results import save_deposition_result, save_metrics_result
-    from pydart.plotting import save_key_plots
 
     output_directory = Path(output_directory)
     restart_number = record.restart_index + 1
@@ -256,13 +257,16 @@ def save_simulation_snapshot(
         simulation_label=label,
         metadata=metadata,
     )
-    save_key_plots(
-        result,
-        metrics,
-        output_directory,
-        dpi=problem.config.simulation.simulation.plot_dpi,
-        simulation_label=label,
-    )
+    if save_plots:
+        from pydart.plotting import save_key_plots
+
+        save_key_plots(
+            result,
+            metrics,
+            output_directory,
+            dpi=problem.config.simulation.simulation.plot_dpi,
+            simulation_label=label,
+        )
     simulation_directory = output_directory / f"simulation_{label}"
     metadata_path = simulation_directory / "optimisation_snapshot.json"
     metadata_path.write_text(

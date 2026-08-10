@@ -77,6 +77,25 @@ print(float(metrics.deposited_fraction))
 print(float(metrics.rms_nonuniformity))
 ```
 
+## Animate an optimization
+
+Install the optional post-processing dependencies and render an optimization
+whose previous best simulations were archived:
+
+```shell
+uv sync --extra postprocessing
+python scripts/plot_optimisation_animation.py \
+    results/optimisations/optimisation_5 --step 10 --fps 5
+```
+
+For a regular pip installation, use
+`python -m pip install -e ".[postprocessing]"` instead.
+
+The script saves six-panel PNG frames under `animation_frames/` and combines
+them into `optimisation_history.mp4`. It requires the run to contain one
+optimization checkpoint and snapshots produced with
+`archive_previous_best_simulations = true`.
+
 ## Development checks
 
 The uv lockfile is committed so contributors and CI use the same resolved
@@ -97,6 +116,7 @@ src/         Installable Python package
 tests/       Unit and differentiation tests
 configs/     Simulation and optimisation input decks
 examples/    Small Python usage examples
+scripts/     Post-processing utilities
 results/     Generated output (not version-controlled)
 ```
 
