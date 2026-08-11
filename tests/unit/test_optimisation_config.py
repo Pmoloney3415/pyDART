@@ -31,6 +31,7 @@ def test_bundled_optimisation_configs_load(filename: str) -> None:
     assert config.run.simulation_config.is_file()
     assert config.restarts.number > 0
     assert config.run.solver == "scipy_lbfgsb"
+    assert config.run.device_iteration_chunk_size == 10
     assert config.objective.mode_weights
     assert all(
         0 <= degree <= config.simulation.metrics.l_max
@@ -92,11 +93,19 @@ def test_explicit_mode_weights_are_parsed_verbatim(tmp_path: Path, monkeypatch) 
     config = load_optimisation_config(path)
 
     assert config.run.solver == "scipy_lbfgsb"
+    assert config.run.device_iteration_chunk_size == 10
     assert config.objective.mode_weights == ((2, 0.75), (4, 0.125))
 
 
 @pytest.mark.parametrize(
-    "case", ["unknown_beam", "reversed_power", "disabled", "unknown_solver"]
+    "case",
+    [
+        "unknown_beam",
+        "reversed_power",
+        "disabled",
+        "unknown_solver",
+        "invalid_chunk_size",
+    ],
 )
 def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
     config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
@@ -133,8 +142,13 @@ def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
                 ),
             ),
         )
-    else:
+    elif case == "unknown_solver":
         config = replace(config, run=replace(config.run, solver="not_a_solver"))
+    else:
+        config = replace(
+            config,
+            run=replace(config.run, device_iteration_chunk_size=0),
+        )
 
     with pytest.raises(ValueError):
         validate_optimisation_config(config)

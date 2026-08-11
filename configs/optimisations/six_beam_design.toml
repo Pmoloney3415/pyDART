@@ -4,6 +4,7 @@ solver = "scipy_lbfgsb"
 simulation_config = "../simulations/six_beam_500um.toml"
 output_directory = "../../results/optimisations"
 maximum_iterations = 1000
+device_iteration_chunk_size = 10
 objective_relative_tolerance = 1.0e-9
 projected_gradient_tolerance = 1.0e-6
 maximum_wall_time_seconds = 3600

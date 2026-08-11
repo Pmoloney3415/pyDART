@@ -20,6 +20,10 @@ use the normalized `[0, 1]` design bounds, with configurable objective and
 projected-gradient tolerances, wall time, checkpoint intervals, and
 history-plot intervals. `[optimisation.restarts]` controls the total number of
 starts, whether the base design is included, and the reproducible random seed.
+For JAXopt, `device_iteration_chunk_size` controls the maximum number of
+accepted iterations compiled and dispatched together before diagnostics return
+to the host. It defaults to `10`; checkpoint and plot boundaries can shorten a
+chunk without triggering a separate compilation.
 
 When `archive_previous_best_simulations = true`, a complete snapshot is saved
 under `previous_best_simulations/` whenever a checkpoint observes a new global

@@ -19,6 +19,8 @@ def validate_optimisation_config(config: OptimisationConfig) -> None:
         )
     if config.run.maximum_iterations <= 0:
         raise ValueError("maximum_iterations must be positive.")
+    if config.run.device_iteration_chunk_size <= 0:
+        raise ValueError("device_iteration_chunk_size must be positive.")
     if config.run.objective_relative_tolerance <= 0.0:
         raise ValueError("objective_relative_tolerance must be positive.")
     if config.run.projected_gradient_tolerance <= 0.0:

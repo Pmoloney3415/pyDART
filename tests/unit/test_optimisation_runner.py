@@ -17,11 +17,14 @@ matplotlib.use("Agg")
 CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
 
 
-@pytest.mark.parametrize("solver", ["scipy_lbfgsb", "jaxopt_lbfgsb"])
-def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
+def _small_six_beam_problem(
     tmp_path: Path,
+    *,
     solver: str,
-) -> None:
+    maximum_iterations: int,
+    device_iteration_chunk_size: int,
+    checkpoint_interval: int,
+) -> OptimisationProblem:
     config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
     simulation = replace(
         config.simulation,
@@ -37,9 +40,12 @@ def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
         config.run,
         solver=solver,
         output_directory=tmp_path,
-        maximum_iterations=1,
-        checkpoint_interval=1,
-        history_plot_interval=1,
+        maximum_iterations=maximum_iterations,
+        device_iteration_chunk_size=device_iteration_chunk_size,
+        objective_relative_tolerance=1.0e-30,
+        projected_gradient_tolerance=1.0e-30,
+        checkpoint_interval=checkpoint_interval,
+        history_plot_interval=checkpoint_interval,
         maximum_wall_time_seconds=120.0,
         save_best_simulation=False,
         archive_previous_best_simulations=False,
@@ -49,7 +55,7 @@ def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
         config.objective,
         mode_weights=config.objective.mode_weights[:4],
     )
-    problem = OptimisationProblem(
+    return OptimisationProblem(
         replace(
             config,
             simulation=simulation,
@@ -57,6 +63,20 @@ def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
             restarts=restarts,
             objective=objective,
         )
+    )
+
+
+@pytest.mark.parametrize("solver", ["scipy_lbfgsb", "jaxopt_lbfgsb"])
+def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
+    tmp_path: Path,
+    solver: str,
+) -> None:
+    problem = _small_six_beam_problem(
+        tmp_path,
+        solver=solver,
+        maximum_iterations=1,
+        device_iteration_chunk_size=3,
+        checkpoint_interval=1,
     )
 
     result = OptimisationRunner(problem).run()
@@ -92,3 +112,24 @@ def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
     assert best.design.shape == (problem.n_parameters,)
     assert best.objective == result.best_objective
     assert elapsed > 0.0
+
+
+def test_jaxopt_compiles_multiple_iterations_into_one_chunk(tmp_path: Path) -> None:
+    problem = _small_six_beam_problem(
+        tmp_path,
+        solver="jaxopt_lbfgsb",
+        maximum_iterations=3,
+        device_iteration_chunk_size=3,
+        checkpoint_interval=3,
+    )
+
+    result = OptimisationRunner(problem).run()
+
+    assert result.restart_results[0].iterations == 3
+    assert len(result.history) == 4
+    assert result.timing is not None
+    assert result.timing["sections"]["optimisation_compute"]["calls"] == 2
+    assert all(
+        np.all((record.design >= 0.0) & (record.design <= 1.0))
+        for record in result.history
+    )

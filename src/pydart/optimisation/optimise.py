@@ -6,6 +6,7 @@ import shutil
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Any, NamedTuple
 
 import jax
 import jax.numpy as jnp
@@ -95,6 +96,33 @@ class _JaxoptHostValues:
     function_evaluations: int
 
 
+class _JaxoptLoopState(NamedTuple):
+    parameters: Any
+    solver_state: Any
+    previous_objective: Any
+    function_evaluation_offset: Any
+    accepted_iterations: Any
+    status: Any
+
+
+class _JaxoptIterationValues(NamedTuple):
+    design: Any
+    value: Any
+    gradient: Any
+    terms: ObjectiveTerms
+    error: Any
+    failed_linesearch: Any
+    function_evaluations: Any
+    valid: Any
+
+
+@dataclass(frozen=True)
+class _JaxoptBackend:
+    solver: Any
+    bounds: tuple[Any, Any]
+    run_chunk: Any
+
+
 class OptimisationRunner:
     """Run configured SciPy or JAXopt L-BFGS-B starts."""
 
@@ -114,6 +142,7 @@ class OptimisationRunner:
         self._resume_design: np.ndarray | None = None
         self._restart_index_offset = 0
         self._timer = Timer()
+        self._jaxopt_backend: _JaxoptBackend | None = None
         if resume_checkpoint is not None:
             history, restart_results, best, elapsed = load_optimisation_checkpoint(
                 resume_checkpoint
@@ -141,6 +170,7 @@ class OptimisationRunner:
     def run(self) -> OptimisationResult:
         """Execute all starts, checkpoint progress, and return the global best."""
         self._timer = Timer()
+        self._jaxopt_backend = None
         self._start_time = time.monotonic()
         output_directory = optimisation_output_directory(self.problem)
         used_configs = output_directory / "used_configs"
@@ -291,28 +321,14 @@ class OptimisationRunner:
         start: np.ndarray,
         restart_index: int,
     ) -> tuple[RestartResult, bool]:
-        from jaxopt import LBFGSB
-
         run = self.problem.config.run
         evaluator.reset_restart_count()
-        solver = LBFGSB(
-            evaluator.jax_value_and_gradient,
-            value_and_grad=True,
-            has_aux=True,
-            maxiter=run.maximum_iterations,
-            tol=run.projected_gradient_tolerance,
-            maxls=20,
-            stop_if_linesearch_fails=True,
-            implicit_diff=False,
-            jit=True,
-        )
         parameters = jnp.asarray(start, dtype=jnp.float64)
-        bounds = (jnp.zeros_like(parameters), jnp.ones_like(parameters))
-        function_evaluation_offset = 0
+        backend = self._get_jaxopt_backend(evaluator, parameters)
         self._timer.start("optimisation_compute")
-        state = solver.init_state(parameters, bounds)
+        solver_state = backend.solver.init_state(parameters, backend.bounds)
         host = _jaxopt_values_on_host(
-            parameters, state, function_evaluation_offset=function_evaluation_offset
+            parameters, solver_state, function_evaluation_offset=0
         )
         self._timer.stop("optimisation_compute")
         evaluator.set_jaxopt_restart_evaluations(host.function_evaluations)
@@ -326,127 +342,141 @@ class OptimisationRunner:
             iteration=0,
         )
         self._persist_first_record()
-        accepted_iterations = 0
-        previous_objective = restart_best.objective
-
-        if host.error <= run.projected_gradient_tolerance:
-            return (
-                _jaxopt_restart_result(
-                    restart_index,
-                    True,
-                    0,
-                    "Projected gradient tolerance reached.",
-                    accepted_iterations,
-                    host.function_evaluations,
-                    restart_best,
-                ),
-                False,
-            )
+        initial_status = (
+            _JAXOPT_PROJECTED_GRADIENT_CONVERGED
+            if host.error <= run.projected_gradient_tolerance
+            else _JAXOPT_RUNNING
+        )
+        loop_state = _JaxoptLoopState(
+            parameters=parameters,
+            solver_state=solver_state,
+            previous_objective=solver_state.value,
+            function_evaluation_offset=jnp.asarray(0, dtype=jnp.int32),
+            accepted_iterations=jnp.asarray(0, dtype=jnp.int32),
+            status=jnp.asarray(initial_status, dtype=jnp.int32),
+        )
 
         try:
-            while accepted_iterations < run.maximum_iterations:
+            while int(loop_state.status) == _JAXOPT_RUNNING:
+                accepted_iterations = int(loop_state.accepted_iterations)
+                steps_to_run = self._jaxopt_steps_to_next_host_event(
+                    accepted_iterations
+                )
                 self._timer.start("optimisation_compute")
-                step = solver.update(parameters, state, bounds)
-                parameters, state = step.params, step.state
-                host = _jaxopt_values_on_host(
-                    parameters,
-                    state,
-                    function_evaluation_offset=function_evaluation_offset,
+                loop_state, device_history = backend.run_chunk(
+                    loop_state, jnp.asarray(steps_to_run, dtype=jnp.int32)
                 )
-                clipped_design = np.clip(host.design, 0.0, 1.0)
-                if _maximum_bound_violation(host.design) > 1.0e-12:
-                    function_evaluation_offset = host.function_evaluations
-                    parameters = jnp.asarray(clipped_design)
-                    state = solver.init_state(parameters, bounds)
-                    host = _jaxopt_values_on_host(
-                        parameters,
-                        state,
-                        function_evaluation_offset=function_evaluation_offset,
-                    )
-                else:
-                    parameters = jnp.clip(parameters, bounds[0], bounds[1])
-                    host = replace(host, design=clipped_design)
+                loop_state, device_history = jax.device_get(
+                    (loop_state, device_history)
+                )
                 self._timer.stop("optimisation_compute")
-                evaluator.set_jaxopt_restart_evaluations(host.function_evaluations)
-                accepted_iterations += 1
-                record = self._record_values(
-                    host.design,
-                    host.value,
-                    host.gradient,
-                    host.terms,
-                    function_evaluations=host.function_evaluations,
-                    restart_index=restart_index,
-                    iteration=accepted_iterations,
-                )
-                if record.objective < restart_best.objective:
-                    restart_best = record
-                self._after_accepted_iteration(accepted_iterations)
-
-                if host.failed_linesearch:
-                    return (
-                        _jaxopt_restart_result(
-                            restart_index,
-                            False,
-                            2,
-                            "JAXopt line search failed.",
-                            accepted_iterations,
-                            host.function_evaluations,
-                            restart_best,
-                        ),
-                        False,
+                function_evaluations = _jaxopt_function_evaluations(loop_state)
+                evaluator.set_jaxopt_restart_evaluations(function_evaluations)
+                for index, valid in enumerate(np.asarray(device_history.valid)):
+                    if not valid:
+                        continue
+                    accepted_iterations += 1
+                    history_value = _jaxopt_history_value(device_history, index)
+                    record = self._record_values(
+                        history_value.design,
+                        history_value.value,
+                        history_value.gradient,
+                        history_value.terms,
+                        function_evaluations=history_value.function_evaluations,
+                        restart_index=restart_index,
+                        iteration=accepted_iterations,
                     )
-                if host.error <= run.projected_gradient_tolerance:
-                    return (
-                        _jaxopt_restart_result(
-                            restart_index,
-                            True,
-                            0,
-                            "Projected gradient tolerance reached.",
-                            accepted_iterations,
-                            host.function_evaluations,
-                            restart_best,
-                        ),
-                        False,
-                    )
-                scale = max(1.0, abs(previous_objective), abs(record.objective))
-                relative_reduction = (previous_objective - record.objective) / scale
-                if 0.0 <= relative_reduction <= run.objective_relative_tolerance:
-                    return (
-                        _jaxopt_restart_result(
-                            restart_index,
-                            True,
-                            0,
-                            "Relative objective tolerance reached.",
-                            accepted_iterations,
-                            host.function_evaluations,
-                            restart_best,
-                        ),
-                        False,
-                    )
-                previous_objective = record.objective
+                    if record.objective < restart_best.objective:
+                        restart_best = record
+                self._after_jaxopt_chunk(accepted_iterations)
         except _WallTimeExceeded:
             return (
                 self._wall_time_restart_result(
                     restart_index,
-                    accepted_iterations,
-                    host.function_evaluations,
+                    int(loop_state.accepted_iterations),
+                    _jaxopt_function_evaluations(loop_state),
                     restart_best,
                 ),
                 True,
             )
 
+        success, status, message = _jaxopt_terminal_result(int(loop_state.status))
         return (
             _jaxopt_restart_result(
                 restart_index,
-                False,
-                1,
-                "Maximum iterations reached.",
-                accepted_iterations,
-                host.function_evaluations,
+                success,
+                status,
+                message,
+                int(loop_state.accepted_iterations),
+                _jaxopt_function_evaluations(loop_state),
                 restart_best,
             ),
             False,
         )
+
+    def _get_jaxopt_backend(
+        self, evaluator: _JaxObjectiveEvaluator, parameters
+    ) -> _JaxoptBackend:
+        if self._jaxopt_backend is not None:
+            return self._jaxopt_backend
+
+        from jaxopt import LBFGSB
+
+        run = self.problem.config.run
+        solver = LBFGSB(
+            evaluator.jax_value_and_gradient,
+            value_and_grad=True,
+            has_aux=True,
+            maxiter=run.maximum_iterations,
+            tol=run.projected_gradient_tolerance,
+            maxls=20,
+            stop_if_linesearch_fails=True,
+            implicit_diff=False,
+            jit=True,
+        )
+        bounds = (jnp.zeros_like(parameters), jnp.ones_like(parameters))
+        self._jaxopt_backend = _JaxoptBackend(
+            solver=solver,
+            bounds=bounds,
+            run_chunk=_build_jaxopt_chunk(
+                solver,
+                bounds,
+                chunk_size=run.device_iteration_chunk_size,
+                maximum_iterations=run.maximum_iterations,
+                objective_relative_tolerance=run.objective_relative_tolerance,
+                projected_gradient_tolerance=run.projected_gradient_tolerance,
+            ),
+        )
+        return self._jaxopt_backend
+
+    def _jaxopt_steps_to_next_host_event(self, accepted_iterations: int) -> int:
+        run = self.problem.config.run
+        steps_remaining = run.maximum_iterations - accepted_iterations
+        steps_to_checkpoint = run.checkpoint_interval - (
+            accepted_iterations % run.checkpoint_interval
+        )
+        steps_to_plot = run.history_plot_interval - (
+            accepted_iterations % run.history_plot_interval
+        )
+        return min(
+            run.device_iteration_chunk_size,
+            steps_remaining,
+            steps_to_checkpoint,
+            steps_to_plot,
+        )
+
+    def _after_jaxopt_chunk(self, accepted_iterations: int) -> None:
+        run = self.problem.config.run
+        checkpoint = accepted_iterations % run.checkpoint_interval == 0
+        history_plot = accepted_iterations % run.history_plot_interval == 0
+        if checkpoint or history_plot:
+            self._persist(
+                checkpoint=checkpoint,
+                history_plot=history_plot,
+                snapshot=checkpoint,
+            )
+        if self._elapsed() >= run.maximum_wall_time_seconds:
+            raise _WallTimeExceeded
 
     def _persist_first_record(self) -> None:
         if len(self._history) == 1:
@@ -693,11 +723,159 @@ class _WallTimeExceeded(Exception):
     pass
 
 
+_JAXOPT_RUNNING = 0
+_JAXOPT_PROJECTED_GRADIENT_CONVERGED = 1
+_JAXOPT_RELATIVE_OBJECTIVE_CONVERGED = 2
+_JAXOPT_LINESEARCH_FAILED = 3
+_JAXOPT_MAXIMUM_ITERATIONS = 4
+
+
 def _projected_gradient(design: np.ndarray, gradient: np.ndarray) -> np.ndarray:
     tolerance = 1.0e-12
     blocked_lower = (design <= tolerance) & (gradient > 0.0)
     blocked_upper = (design >= 1.0 - tolerance) & (gradient < 0.0)
     return np.where(blocked_lower | blocked_upper, 0.0, gradient)
+
+
+def _build_jaxopt_chunk(
+    solver,
+    bounds,
+    *,
+    chunk_size: int,
+    maximum_iterations: int,
+    objective_relative_tolerance: float,
+    projected_gradient_tolerance: float,
+):
+    def run_chunk(loop_state: _JaxoptLoopState, steps_to_run):
+        def scan_step(state: _JaxoptLoopState, chunk_index):
+            should_update = (
+                (state.status == _JAXOPT_RUNNING)
+                & (chunk_index < steps_to_run)
+                & (state.accepted_iterations < maximum_iterations)
+            )
+
+            def update(_):
+                step = solver.update(
+                    state.parameters,
+                    state.solver_state,
+                    bounds,
+                )
+                raw_parameters, raw_solver_state = step.params, step.state
+                clipped_parameters = jnp.clip(
+                    raw_parameters,
+                    bounds[0],
+                    bounds[1],
+                )
+                bound_violation = jnp.maximum(
+                    jnp.max(bounds[0] - raw_parameters),
+                    jnp.max(raw_parameters - bounds[1]),
+                )
+                raw_function_evaluations = (
+                    state.function_evaluation_offset + raw_solver_state.num_fun_eval
+                )
+
+                def reinitialise(_):
+                    return (
+                        solver.init_state(clipped_parameters, bounds),
+                        raw_function_evaluations,
+                    )
+
+                def retain_history(_):
+                    return raw_solver_state, state.function_evaluation_offset
+
+                corrected_solver_state, function_evaluation_offset = jax.lax.cond(
+                    bound_violation > 1.0e-12,
+                    reinitialise,
+                    retain_history,
+                    operand=None,
+                )
+                accepted_iterations = state.accepted_iterations + 1
+                scale = jnp.maximum(
+                    1.0,
+                    jnp.maximum(
+                        jnp.abs(state.previous_objective),
+                        jnp.abs(corrected_solver_state.value),
+                    ),
+                )
+                relative_reduction = (
+                    state.previous_objective - corrected_solver_state.value
+                ) / scale
+                relative_converged = (relative_reduction >= 0.0) & (
+                    relative_reduction <= objective_relative_tolerance
+                )
+                projected_converged = (
+                    corrected_solver_state.error <= projected_gradient_tolerance
+                )
+                status = jnp.asarray(_JAXOPT_RUNNING, dtype=jnp.int32)
+                status = jnp.where(
+                    relative_converged,
+                    _JAXOPT_RELATIVE_OBJECTIVE_CONVERGED,
+                    status,
+                )
+                status = jnp.where(
+                    projected_converged,
+                    _JAXOPT_PROJECTED_GRADIENT_CONVERGED,
+                    status,
+                )
+                status = jnp.where(
+                    raw_solver_state.failed_linesearch,
+                    _JAXOPT_LINESEARCH_FAILED,
+                    status,
+                )
+                status = jnp.where(
+                    (status == _JAXOPT_RUNNING)
+                    & (accepted_iterations >= maximum_iterations),
+                    _JAXOPT_MAXIMUM_ITERATIONS,
+                    status,
+                )
+                function_evaluations = (
+                    function_evaluation_offset + corrected_solver_state.num_fun_eval
+                )
+                new_state = _JaxoptLoopState(
+                    parameters=clipped_parameters,
+                    solver_state=corrected_solver_state,
+                    previous_objective=corrected_solver_state.value,
+                    function_evaluation_offset=function_evaluation_offset,
+                    accepted_iterations=accepted_iterations,
+                    status=status,
+                )
+                values = _JaxoptIterationValues(
+                    design=clipped_parameters,
+                    value=corrected_solver_state.value,
+                    gradient=corrected_solver_state.grad,
+                    terms=corrected_solver_state.aux,
+                    error=corrected_solver_state.error,
+                    failed_linesearch=raw_solver_state.failed_linesearch,
+                    function_evaluations=function_evaluations,
+                    valid=jnp.asarray(True),
+                )
+                return new_state, values
+
+            def skip(_):
+                function_evaluations = (
+                    state.function_evaluation_offset + state.solver_state.num_fun_eval
+                )
+                values = _JaxoptIterationValues(
+                    design=state.parameters,
+                    value=state.solver_state.value,
+                    gradient=state.solver_state.grad,
+                    terms=state.solver_state.aux,
+                    error=state.solver_state.error,
+                    failed_linesearch=jnp.asarray(False),
+                    function_evaluations=function_evaluations,
+                    valid=jnp.asarray(False),
+                )
+                return state, values
+
+            return jax.lax.cond(should_update, update, skip, operand=None)
+
+        return jax.lax.scan(
+            scan_step,
+            loop_state,
+            jnp.arange(chunk_size, dtype=jnp.int32),
+        )
+
+    return jax.jit(run_chunk)
 
 
 def _jaxopt_values_on_host(
@@ -733,8 +911,34 @@ def _jaxopt_values_on_host(
     )
 
 
-def _maximum_bound_violation(design: np.ndarray) -> float:
-    return max(0.0, float(np.max(np.maximum(-design, design - 1.0))))
+def _jaxopt_history_value(history, index: int) -> _JaxoptHostValues:
+    return _JaxoptHostValues(
+        design=np.asarray(history.design[index], dtype=np.float64),
+        value=float(history.value[index]),
+        gradient=np.asarray(history.gradient[index], dtype=np.float64),
+        terms=jax.tree.map(lambda values: values[index], history.terms),
+        error=float(history.error[index]),
+        failed_linesearch=bool(history.failed_linesearch[index]),
+        function_evaluations=int(history.function_evaluations[index]),
+    )
+
+
+def _jaxopt_function_evaluations(loop_state: _JaxoptLoopState) -> int:
+    return int(loop_state.function_evaluation_offset) + int(
+        loop_state.solver_state.num_fun_eval
+    )
+
+
+def _jaxopt_terminal_result(status: int) -> tuple[bool, int, str]:
+    if status == _JAXOPT_PROJECTED_GRADIENT_CONVERGED:
+        return True, 0, "Projected gradient tolerance reached."
+    if status == _JAXOPT_RELATIVE_OBJECTIVE_CONVERGED:
+        return True, 0, "Relative objective tolerance reached."
+    if status == _JAXOPT_LINESEARCH_FAILED:
+        return False, 2, "JAXopt line search failed."
+    if status == _JAXOPT_MAXIMUM_ITERATIONS:
+        return False, 1, "Maximum iterations reached."
+    raise RuntimeError(f"Unknown JAXopt terminal status: {status}.")
 
 
 def _jaxopt_restart_result(

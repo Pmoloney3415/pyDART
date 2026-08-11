@@ -16,6 +16,7 @@ class OptimisationRunConfig:
     simulation_config: Path
     output_directory: Path
     maximum_iterations: int
+    device_iteration_chunk_size: int
     objective_relative_tolerance: float
     projected_gradient_tolerance: float
     maximum_wall_time_seconds: float
@@ -122,6 +123,9 @@ def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
         simulation_config=simulation_path,
         output_directory=(base_directory / run_data["output_directory"]).resolve(),
         maximum_iterations=int(run_data["maximum_iterations"]),
+        device_iteration_chunk_size=int(
+            run_data.get("device_iteration_chunk_size", 10)
+        ),
         objective_relative_tolerance=float(
             run_data.get("objective_relative_tolerance", 1.0e-9)
         ),
