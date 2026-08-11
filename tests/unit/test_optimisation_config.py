@@ -30,6 +30,7 @@ def test_bundled_optimisation_configs_load(filename: str) -> None:
     assert set(config.variables.frozen_beams) <= beam_names
     assert config.run.simulation_config.is_file()
     assert config.restarts.number > 0
+    assert config.run.solver == "scipy_lbfgsb"
     assert config.objective.mode_weights
     assert all(
         0 <= degree <= config.simulation.metrics.l_max
@@ -90,10 +91,13 @@ def test_explicit_mode_weights_are_parsed_verbatim(tmp_path: Path, monkeypatch) 
 
     config = load_optimisation_config(path)
 
+    assert config.run.solver == "scipy_lbfgsb"
     assert config.objective.mode_weights == ((2, 0.75), (4, 0.125))
 
 
-@pytest.mark.parametrize("case", ["unknown_beam", "reversed_power", "disabled"])
+@pytest.mark.parametrize(
+    "case", ["unknown_beam", "reversed_power", "disabled", "unknown_solver"]
+)
 def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
     config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
     if case == "unknown_beam":
@@ -113,7 +117,7 @@ def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
                 ),
             ),
         )
-    else:
+    elif case == "disabled":
         config = replace(
             config,
             variables=replace(
@@ -129,6 +133,8 @@ def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
                 ),
             ),
         )
+    else:
+        config = replace(config, run=replace(config.run, solver="not_a_solver"))
 
     with pytest.raises(ValueError):
         validate_optimisation_config(config)

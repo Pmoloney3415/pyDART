@@ -13,6 +13,10 @@ if TYPE_CHECKING:
 
 def validate_optimisation_config(config: OptimisationConfig) -> None:
     """Validate a fully constructed optimisation configuration."""
+    if config.run.solver not in {"scipy_lbfgsb", "jaxopt_lbfgsb"}:
+        raise ValueError(
+            "optimisation.solver must be 'scipy_lbfgsb' or 'jaxopt_lbfgsb'."
+        )
     if config.run.maximum_iterations <= 0:
         raise ValueError("maximum_iterations must be positive.")
     if config.run.objective_relative_tolerance <= 0.0:

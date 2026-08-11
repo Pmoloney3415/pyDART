@@ -84,8 +84,19 @@ class OptimisationResult:
         return self.best_record.objective
 
 
+@dataclass(frozen=True)
+class _JaxoptHostValues:
+    design: np.ndarray
+    value: float
+    gradient: np.ndarray
+    terms: ObjectiveTerms
+    error: float
+    failed_linesearch: bool
+    function_evaluations: int
+
+
 class OptimisationRunner:
-    """Run configured SciPy L-BFGS-B starts using JIT-compiled JAX gradients."""
+    """Run configured SciPy or JAXopt L-BFGS-B starts."""
 
     def __init__(
         self,
@@ -129,13 +140,6 @@ class OptimisationRunner:
 
     def run(self) -> OptimisationResult:
         """Execute all starts, checkpoint progress, and return the global best."""
-        try:
-            from scipy.optimize import minimize
-        except ImportError as error:
-            raise ImportError(
-                "Running pyDART optimization requires the optional 'scipy' dependency."
-            ) from error
-
         self._timer = Timer()
         self._start_time = time.monotonic()
         output_directory = optimisation_output_directory(self.problem)
@@ -159,83 +163,15 @@ class OptimisationRunner:
             if self._elapsed() >= self.problem.config.run.maximum_wall_time_seconds:
                 stopped_for_time = True
                 break
-            evaluator.reset_restart_count()
-            restart_best = self._record(
-                evaluator,
-                start,
-                restart_index=restart_index,
-                iteration=0,
-            )
-            if len(self._history) == 1:
-                self._persist(checkpoint=True, history_plot=True, snapshot=True)
-
-            accepted_iterations = 0
-
-            def callback(design, restart_index=restart_index):
-                nonlocal accepted_iterations, restart_best
-                accepted_iterations += 1
-                record = self._record(
-                    evaluator,
-                    design,
-                    restart_index=restart_index,
-                    iteration=accepted_iterations,
+            if self.problem.config.run.solver == "scipy_lbfgsb":
+                restart_result, restart_stopped_for_time = self._run_scipy_restart(
+                    evaluator, start, restart_index
                 )
-                if record.objective < restart_best.objective:
-                    restart_best = record
-                checkpoint = (
-                    accepted_iterations % self.problem.config.run.checkpoint_interval
-                    == 0
+            else:
+                restart_result, restart_stopped_for_time = self._run_jaxopt_restart(
+                    evaluator, start, restart_index
                 )
-                history_plot = (
-                    accepted_iterations % self.problem.config.run.history_plot_interval
-                    == 0
-                )
-                if checkpoint or history_plot:
-                    self._persist(
-                        checkpoint=checkpoint,
-                        history_plot=history_plot,
-                        snapshot=checkpoint,
-                    )
-                if self._elapsed() >= self.problem.config.run.maximum_wall_time_seconds:
-                    raise _WallTimeExceeded
-
-            try:
-                scipy_result = minimize(
-                    evaluator.scipy_value_and_gradient,
-                    np.asarray(start, dtype=np.float64),
-                    method="L-BFGS-B",
-                    jac=True,
-                    bounds=[(0.0, 1.0)] * self.problem.n_parameters,
-                    callback=callback,
-                    options={
-                        "maxiter": self.problem.config.run.maximum_iterations,
-                        "ftol": (self.problem.config.run.objective_relative_tolerance),
-                        "gtol": (self.problem.config.run.projected_gradient_tolerance),
-                        "maxls": 20,
-                    },
-                )
-                restart_result = RestartResult(
-                    restart_index=restart_index,
-                    success=bool(scipy_result.success),
-                    status=int(scipy_result.status),
-                    message=str(scipy_result.message),
-                    iterations=int(scipy_result.nit),
-                    function_evaluations=int(scipy_result.nfev),
-                    best_objective=restart_best.objective,
-                    best_design=restart_best.design.copy(),
-                )
-            except _WallTimeExceeded:
-                stopped_for_time = True
-                restart_result = RestartResult(
-                    restart_index=restart_index,
-                    success=False,
-                    status=2,
-                    message="Maximum wall time reached.",
-                    iterations=accepted_iterations,
-                    function_evaluations=evaluator.restart_evaluations,
-                    best_objective=restart_best.objective,
-                    best_design=restart_best.design.copy(),
-                )
+            stopped_for_time = stopped_for_time or restart_stopped_for_time
             self._restart_results.append(restart_result)
             self._persist(checkpoint=True, history_plot=True, snapshot=True)
             if stopped_for_time:
@@ -274,9 +210,281 @@ class OptimisationRunner:
             metadata={
                 "run_type": "optimisation",
                 "optimisation_index": self.problem.config.run.index,
+                "solver": self.problem.config.run.solver,
             },
         )
         return result
+
+    def _run_scipy_restart(
+        self,
+        evaluator: _JaxObjectiveEvaluator,
+        start: np.ndarray,
+        restart_index: int,
+    ) -> tuple[RestartResult, bool]:
+        from scipy.optimize import minimize
+
+        evaluator.reset_restart_count()
+        restart_best = self._record(
+            evaluator,
+            start,
+            restart_index=restart_index,
+            iteration=0,
+        )
+        self._persist_first_record()
+        accepted_iterations = 0
+
+        def callback(design):
+            nonlocal accepted_iterations, restart_best
+            accepted_iterations += 1
+            record = self._record(
+                evaluator,
+                design,
+                restart_index=restart_index,
+                iteration=accepted_iterations,
+            )
+            if record.objective < restart_best.objective:
+                restart_best = record
+            self._after_accepted_iteration(accepted_iterations)
+
+        try:
+            scipy_result = minimize(
+                evaluator.scipy_value_and_gradient,
+                np.asarray(start, dtype=np.float64),
+                method="L-BFGS-B",
+                jac=True,
+                bounds=[(0.0, 1.0)] * self.problem.n_parameters,
+                callback=callback,
+                options={
+                    "maxiter": self.problem.config.run.maximum_iterations,
+                    "ftol": self.problem.config.run.objective_relative_tolerance,
+                    "gtol": self.problem.config.run.projected_gradient_tolerance,
+                    "maxls": 20,
+                },
+            )
+            return (
+                RestartResult(
+                    restart_index=restart_index,
+                    success=bool(scipy_result.success),
+                    status=int(scipy_result.status),
+                    message=str(scipy_result.message),
+                    iterations=int(scipy_result.nit),
+                    function_evaluations=int(scipy_result.nfev),
+                    best_objective=restart_best.objective,
+                    best_design=restart_best.design.copy(),
+                ),
+                False,
+            )
+        except _WallTimeExceeded:
+            return (
+                self._wall_time_restart_result(
+                    restart_index,
+                    accepted_iterations,
+                    evaluator.restart_evaluations,
+                    restart_best,
+                ),
+                True,
+            )
+
+    def _run_jaxopt_restart(
+        self,
+        evaluator: _JaxObjectiveEvaluator,
+        start: np.ndarray,
+        restart_index: int,
+    ) -> tuple[RestartResult, bool]:
+        from jaxopt import LBFGSB
+
+        run = self.problem.config.run
+        evaluator.reset_restart_count()
+        solver = LBFGSB(
+            evaluator.jax_value_and_gradient,
+            value_and_grad=True,
+            has_aux=True,
+            maxiter=run.maximum_iterations,
+            tol=run.projected_gradient_tolerance,
+            maxls=20,
+            stop_if_linesearch_fails=True,
+            implicit_diff=False,
+            jit=True,
+        )
+        parameters = jnp.asarray(start, dtype=jnp.float64)
+        bounds = (jnp.zeros_like(parameters), jnp.ones_like(parameters))
+        function_evaluation_offset = 0
+        self._timer.start("optimisation_compute")
+        state = solver.init_state(parameters, bounds)
+        host = _jaxopt_values_on_host(
+            parameters, state, function_evaluation_offset=function_evaluation_offset
+        )
+        self._timer.stop("optimisation_compute")
+        evaluator.set_jaxopt_restart_evaluations(host.function_evaluations)
+        restart_best = self._record_values(
+            host.design,
+            host.value,
+            host.gradient,
+            host.terms,
+            function_evaluations=host.function_evaluations,
+            restart_index=restart_index,
+            iteration=0,
+        )
+        self._persist_first_record()
+        accepted_iterations = 0
+        previous_objective = restart_best.objective
+
+        if host.error <= run.projected_gradient_tolerance:
+            return (
+                _jaxopt_restart_result(
+                    restart_index,
+                    True,
+                    0,
+                    "Projected gradient tolerance reached.",
+                    accepted_iterations,
+                    host.function_evaluations,
+                    restart_best,
+                ),
+                False,
+            )
+
+        try:
+            while accepted_iterations < run.maximum_iterations:
+                self._timer.start("optimisation_compute")
+                step = solver.update(parameters, state, bounds)
+                parameters, state = step.params, step.state
+                host = _jaxopt_values_on_host(
+                    parameters,
+                    state,
+                    function_evaluation_offset=function_evaluation_offset,
+                )
+                clipped_design = np.clip(host.design, 0.0, 1.0)
+                if _maximum_bound_violation(host.design) > 1.0e-12:
+                    function_evaluation_offset = host.function_evaluations
+                    parameters = jnp.asarray(clipped_design)
+                    state = solver.init_state(parameters, bounds)
+                    host = _jaxopt_values_on_host(
+                        parameters,
+                        state,
+                        function_evaluation_offset=function_evaluation_offset,
+                    )
+                else:
+                    parameters = jnp.clip(parameters, bounds[0], bounds[1])
+                    host = replace(host, design=clipped_design)
+                self._timer.stop("optimisation_compute")
+                evaluator.set_jaxopt_restart_evaluations(host.function_evaluations)
+                accepted_iterations += 1
+                record = self._record_values(
+                    host.design,
+                    host.value,
+                    host.gradient,
+                    host.terms,
+                    function_evaluations=host.function_evaluations,
+                    restart_index=restart_index,
+                    iteration=accepted_iterations,
+                )
+                if record.objective < restart_best.objective:
+                    restart_best = record
+                self._after_accepted_iteration(accepted_iterations)
+
+                if host.failed_linesearch:
+                    return (
+                        _jaxopt_restart_result(
+                            restart_index,
+                            False,
+                            2,
+                            "JAXopt line search failed.",
+                            accepted_iterations,
+                            host.function_evaluations,
+                            restart_best,
+                        ),
+                        False,
+                    )
+                if host.error <= run.projected_gradient_tolerance:
+                    return (
+                        _jaxopt_restart_result(
+                            restart_index,
+                            True,
+                            0,
+                            "Projected gradient tolerance reached.",
+                            accepted_iterations,
+                            host.function_evaluations,
+                            restart_best,
+                        ),
+                        False,
+                    )
+                scale = max(1.0, abs(previous_objective), abs(record.objective))
+                relative_reduction = (previous_objective - record.objective) / scale
+                if 0.0 <= relative_reduction <= run.objective_relative_tolerance:
+                    return (
+                        _jaxopt_restart_result(
+                            restart_index,
+                            True,
+                            0,
+                            "Relative objective tolerance reached.",
+                            accepted_iterations,
+                            host.function_evaluations,
+                            restart_best,
+                        ),
+                        False,
+                    )
+                previous_objective = record.objective
+        except _WallTimeExceeded:
+            return (
+                self._wall_time_restart_result(
+                    restart_index,
+                    accepted_iterations,
+                    host.function_evaluations,
+                    restart_best,
+                ),
+                True,
+            )
+
+        return (
+            _jaxopt_restart_result(
+                restart_index,
+                False,
+                1,
+                "Maximum iterations reached.",
+                accepted_iterations,
+                host.function_evaluations,
+                restart_best,
+            ),
+            False,
+        )
+
+    def _persist_first_record(self) -> None:
+        if len(self._history) == 1:
+            self._persist(checkpoint=True, history_plot=True, snapshot=True)
+
+    def _after_accepted_iteration(self, accepted_iterations: int) -> None:
+        checkpoint = (
+            accepted_iterations % self.problem.config.run.checkpoint_interval == 0
+        )
+        history_plot = (
+            accepted_iterations % self.problem.config.run.history_plot_interval == 0
+        )
+        if checkpoint or history_plot:
+            self._persist(
+                checkpoint=checkpoint,
+                history_plot=history_plot,
+                snapshot=checkpoint,
+            )
+        if self._elapsed() >= self.problem.config.run.maximum_wall_time_seconds:
+            raise _WallTimeExceeded
+
+    @staticmethod
+    def _wall_time_restart_result(
+        restart_index: int,
+        accepted_iterations: int,
+        function_evaluations: int,
+        restart_best: IterationRecord,
+    ) -> RestartResult:
+        return RestartResult(
+            restart_index=restart_index,
+            success=False,
+            status=2,
+            message="Maximum wall time reached.",
+            iterations=accepted_iterations,
+            function_evaluations=function_evaluations,
+            best_objective=restart_best.objective,
+            best_design=restart_best.design.copy(),
+        )
 
     def _record(
         self,
@@ -287,13 +495,35 @@ class OptimisationRunner:
         iteration: int,
     ) -> IterationRecord:
         value, gradient, terms = evaluator.evaluate(design)
+        return self._record_values(
+            design,
+            value,
+            gradient,
+            terms,
+            function_evaluations=evaluator.restart_evaluations,
+            restart_index=restart_index,
+            iteration=iteration,
+        )
+
+    def _record_values(
+        self,
+        design,
+        value: float,
+        gradient,
+        terms: ObjectiveTerms,
+        *,
+        function_evaluations: int,
+        restart_index: int,
+        iteration: int,
+    ) -> IterationRecord:
         design = np.asarray(design, dtype=np.float64).copy()
+        gradient = np.asarray(gradient, dtype=np.float64)
         projected_gradient = _projected_gradient(design, gradient)
         record = IterationRecord(
             restart_index=restart_index,
             iteration=iteration,
             history_index=len(self._history),
-            function_evaluations=evaluator.restart_evaluations,
+            function_evaluations=function_evaluations,
             elapsed_seconds=self._elapsed(),
             objective=value,
             rms_contribution=float(terms.rms_contribution),
@@ -409,7 +639,7 @@ class OptimisationRunner:
 
 
 class _JaxObjectiveEvaluator:
-    """Cache the most recent device evaluation for SciPy and callbacks."""
+    """Compile the shared objective and cache evaluations made for SciPy."""
 
     def __init__(self, problem: OptimisationProblem, timer: Timer):
         self._function = jax.jit(
@@ -423,6 +653,11 @@ class _JaxObjectiveEvaluator:
 
     def reset_restart_count(self) -> None:
         self.restart_evaluations = 0
+
+    def set_jaxopt_restart_evaluations(self, count: int) -> None:
+        delta = count - self.restart_evaluations
+        self.total_evaluations += max(0, delta)
+        self.restart_evaluations = count
 
     def evaluate(self, design) -> tuple[float, np.ndarray, ObjectiveTerms]:
         design = np.asarray(design, dtype=np.float64)
@@ -450,6 +685,9 @@ class _JaxObjectiveEvaluator:
         value, gradient, _ = self.evaluate(design)
         return value, gradient
 
+    def jax_value_and_gradient(self, design):
+        return self._function(design)
+
 
 class _WallTimeExceeded(Exception):
     pass
@@ -460,3 +698,61 @@ def _projected_gradient(design: np.ndarray, gradient: np.ndarray) -> np.ndarray:
     blocked_lower = (design <= tolerance) & (gradient > 0.0)
     blocked_upper = (design >= 1.0 - tolerance) & (gradient < 0.0)
     return np.where(blocked_lower | blocked_upper, 0.0, gradient)
+
+
+def _jaxopt_values_on_host(
+    parameters, state, *, function_evaluation_offset: int
+) -> _JaxoptHostValues:
+    (
+        design,
+        value,
+        gradient,
+        terms,
+        error,
+        failed_linesearch,
+        function_evaluations,
+    ) = jax.device_get(
+        (
+            parameters,
+            state.value,
+            state.grad,
+            state.aux,
+            state.error,
+            state.failed_linesearch,
+            state.num_fun_eval,
+        )
+    )
+    return _JaxoptHostValues(
+        design=np.asarray(design, dtype=np.float64),
+        value=float(value),
+        gradient=np.asarray(gradient, dtype=np.float64),
+        terms=terms,
+        error=float(error),
+        failed_linesearch=bool(failed_linesearch),
+        function_evaluations=(function_evaluation_offset + int(function_evaluations)),
+    )
+
+
+def _maximum_bound_violation(design: np.ndarray) -> float:
+    return max(0.0, float(np.max(np.maximum(-design, design - 1.0))))
+
+
+def _jaxopt_restart_result(
+    restart_index: int,
+    success: bool,
+    status: int,
+    message: str,
+    iterations: int,
+    function_evaluations: int,
+    restart_best: IterationRecord,
+) -> RestartResult:
+    return RestartResult(
+        restart_index=restart_index,
+        success=success,
+        status=status,
+        message=message,
+        iterations=iterations,
+        function_evaluations=function_evaluations,
+        best_objective=restart_best.objective,
+        best_design=restart_best.design.copy(),
+    )

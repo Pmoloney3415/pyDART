@@ -1,5 +1,6 @@
 [optimisation]
 index = 1
+solver = "scipy_lbfgsb"
 simulation_config = "../simulations/OMEGA60_500um.toml"
 output_directory = "../../results/optimisations"
 maximum_iterations = 750

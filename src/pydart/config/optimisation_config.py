@@ -12,6 +12,7 @@ from pydart.config.simulation_config import PyDARTConfig, load_config
 @dataclass(frozen=True)
 class OptimisationRunConfig:
     index: int
+    solver: str
     simulation_config: Path
     output_directory: Path
     maximum_iterations: int
@@ -117,6 +118,7 @@ def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
     simulation = load_config(simulation_path)
     run = OptimisationRunConfig(
         index=int(run_data["index"]),
+        solver=str(run_data.get("solver", "scipy_lbfgsb")),
         simulation_config=simulation_path,
         output_directory=(base_directory / run_data["output_directory"]).resolve(),
         maximum_iterations=int(run_data["maximum_iterations"]),

@@ -14,11 +14,12 @@ bounds, optional frozen beam names, and objective weights. Physical port
 origins remain at their configured radius while their angular positions may
 be bounded or unconstrained on the facility sphere.
 
-Optimization run controls live in `[optimisation]`. L-BFGS-B uses the
-normalized `[0, 1]` design bounds, with configurable objective and projected
-gradient tolerances, wall time, checkpoint intervals, and history-plot
-intervals. `[optimisation.restarts]` controls the total number of starts,
-whether the base design is included, and the reproducible random seed.
+Optimization run controls live in `[optimisation]`. Set `solver` to
+`"scipy_lbfgsb"` (the default) or `"jaxopt_lbfgsb"`. Both L-BFGS-B backends
+use the normalized `[0, 1]` design bounds, with configurable objective and
+projected-gradient tolerances, wall time, checkpoint intervals, and
+history-plot intervals. `[optimisation.restarts]` controls the total number of
+starts, whether the base design is included, and the reproducible random seed.
 
 When `archive_previous_best_simulations = true`, a complete snapshot is saved
 under `previous_best_simulations/` whenever a checkpoint observes a new global
@@ -30,5 +31,5 @@ enabled. Set `save_simulation_plots = false` to omit the key-plot PNGs while
 retaining that data for later plotting. The setting defaults to `true`.
 An interrupted run can be restarted from its best saved design with
 `pydart-optimise CONFIG --resume CHECKPOINT`. This preserves the recorded
-history, but starts a fresh L-BFGS approximation because SciPy does not expose
-its internal inverse-Hessian memory for serialization.
+history, but starts a fresh L-BFGS approximation because optimizer state is not
+currently serialized.

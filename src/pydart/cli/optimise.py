@@ -15,8 +15,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--resume",
         help=(
-            "Resume approximately from a checkpoint's best design. SciPy's "
-            "internal L-BFGS history is restarted."
+            "Resume approximately from a checkpoint's best design. The "
+            "optimizer's internal L-BFGS history is restarted."
         ),
     )
     arguments = parser.parse_args(argv)

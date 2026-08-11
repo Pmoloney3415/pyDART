@@ -33,6 +33,7 @@ classifiers = [
 dependencies = [
     "h5py",
     "jax",
+    "jaxopt",
     "matplotlib",
     "numpy",
     "scipy",

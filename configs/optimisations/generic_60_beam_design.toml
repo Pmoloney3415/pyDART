@@ -1,5 +1,6 @@
 [optimisation]
 index = 60
+solver = "scipy_lbfgsb"
 simulation_config = "../simulations/generic_60_beam_500um.toml"
 output_directory = "../../results/optimisations"
 maximum_iterations = 1000
@@ -54,4 +55,3 @@ deposited_power_weight = 0.5
 mode_weight_option = "decreasing"
 l1_mode_weight = 10.0
 mode_decrease_power = 0.1
-

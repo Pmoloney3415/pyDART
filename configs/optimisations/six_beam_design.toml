@@ -1,5 +1,6 @@
 [optimisation]
 index = 5
+solver = "scipy_lbfgsb"
 simulation_config = "../simulations/six_beam_500um.toml"
 output_directory = "../../results/optimisations"
 maximum_iterations = 1000

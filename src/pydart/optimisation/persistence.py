@@ -111,6 +111,7 @@ def save_optimisation_checkpoint(
     with h5py.File(temporary_path, "w") as handle:
         handle.attrs["format"] = "pyDART optimization checkpoint"
         handle.attrs["optimisation_index"] = problem.config.run.index
+        handle.attrs["solver"] = problem.config.run.solver
         handle.attrs["elapsed_seconds"] = elapsed_seconds
         handle.attrs["resume_semantics"] = (
             "Restart L-BFGS-B from saved best design; internal Hessian history "
@@ -192,6 +193,7 @@ def save_optimisation_summary(result: OptimisationResult) -> Path:
     best = result.best_record
     data = {
         "optimisation_index": result.problem.config.run.index,
+        "solver": result.problem.config.run.solver,
         "success": result.success,
         "message": result.message,
         "elapsed_seconds": result.elapsed_seconds,
