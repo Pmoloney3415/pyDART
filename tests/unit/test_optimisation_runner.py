@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 
+import h5py
 import matplotlib
 import numpy as np
 import pytest
@@ -15,6 +18,22 @@ from pydart.optimisation.persistence import load_optimisation_checkpoint
 matplotlib.use("Agg")
 
 CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
+PARAMETER_PLOT_SCRIPT = (
+    Path(__file__).parents[2] / "scripts" / "plot_optimisation_parameters.py"
+)
+RESTART_PARAMETER_PLOT_SCRIPT = (
+    Path(__file__).parents[2]
+    / "scripts"
+    / "plot_optimisation_restart_parameters.py"
+)
+BEST_RESULT_PLOT_SCRIPT = (
+    Path(__file__).parents[2] / "scripts" / "plot_optimisation_best_result.py"
+)
+RESTART_RESULT_PLOT_SCRIPT = (
+    Path(__file__).parents[2]
+    / "scripts"
+    / "plot_optimisation_restart_results.py"
+)
 
 
 def _small_six_beam_problem(
@@ -25,7 +44,9 @@ def _small_six_beam_problem(
     device_iteration_chunk_size: int,
     checkpoint_interval: int,
 ) -> OptimisationProblem:
-    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    config = load_optimisation_config(
+        CONFIG_DIRECTORY / "six_beam_design_scipy.toml"
+    )
     simulation = replace(
         config.simulation,
         simulation=replace(config.simulation.simulation, plot_dpi=40),
@@ -101,6 +122,63 @@ def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
     used_configs = output / "used_configs"
     assert (used_configs / "optimisation.toml").is_file()
     assert (used_configs / "simulation.toml").is_file()
+
+    with h5py.File(checkpoint_path, "r") as handle:
+        restart = handle["restarts/0"]
+        for name in (
+            "physical_origins",
+            "pointing_locations",
+            "power_fractions_of_maximum",
+            "spot_widths",
+            "spot_rotations",
+            "supergaussian_indices",
+        ):
+            assert name in restart
+
+    overall_snapshot = next((output / "best_simulation").glob("simulation_*"))
+    restart_snapshot = next(
+        (output / "restart_best_simulations" / "restart_1").glob("simulation_*")
+    )
+    overall_metadata = json.loads(
+        (overall_snapshot / "optimisation_snapshot.json").read_text(encoding="utf-8")
+    )
+    restart_metadata = json.loads(
+        (restart_snapshot / "optimisation_snapshot.json").read_text(encoding="utf-8")
+    )
+    assert restart_metadata["design"] == overall_metadata["design"]
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(PARAMETER_PLOT_SCRIPT),
+            str(output),
+            "--dpi",
+            "40",
+        ],
+        check=True,
+    )
+    assert (output / "optimisation_parameter_summary.png").is_file()
+    assert not (output / "optimisation_parameter_summary_restart_1.png").exists()
+
+    if solver == "scipy_lbfgsb":
+        for script in (
+            RESTART_PARAMETER_PLOT_SCRIPT,
+            BEST_RESULT_PLOT_SCRIPT,
+            RESTART_RESULT_PLOT_SCRIPT,
+        ):
+            subprocess.run(
+                [sys.executable, str(script), str(output), "--dpi", "40"],
+                check=True,
+            )
+        assert (
+            output
+            / "restart_parameter_plots"
+            / "restart_1_parameters.png"
+        ).is_file()
+        assert (output / "optimisation_best_result.png").is_file()
+        assert (
+            output / "restart_result_plots" / "restart_1_result.png"
+        ).is_file()
 
     history, restarts, best, elapsed = load_optimisation_checkpoint(checkpoint_path)
     assert len(history) == len(result.history)

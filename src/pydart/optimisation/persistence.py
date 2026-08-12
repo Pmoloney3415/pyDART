@@ -157,13 +157,6 @@ def save_optimisation_checkpoint(
             compression="gzip",
             shuffle=True,
         )
-        history_group.create_dataset(
-            "normalized_power_by_l",
-            data=np.stack([record.normalized_power_by_l for record in records]),
-            compression="gzip",
-            shuffle=True,
-        )
-
         _write_design_state(handle.create_group("current"), problem, records[-1])
         _write_design_state(handle.create_group("global_best"), problem, best_record)
         restarts = handle.create_group("restarts")
@@ -176,6 +169,7 @@ def save_optimisation_checkpoint(
             group.attrs["function_evaluations"] = result.function_evaluations
             group.attrs["best_objective"] = result.best_objective
             group.create_dataset("best_design", data=result.best_design)
+            _write_parameter_state(group, problem, result.best_design)
 
     temporary_path.replace(path)
     return path
@@ -290,11 +284,15 @@ def save_simulation_snapshot(
 
 
 def _write_design_state(group, problem, record) -> None:
-    parameters = problem.beam_parameters(record.design)
     group.attrs["objective"] = record.objective
     group.attrs["restart_index"] = record.restart_index
     group.attrs["iteration"] = record.iteration
     group.create_dataset("design", data=record.design)
+    _write_parameter_state(group, problem, record.design)
+
+
+def _write_parameter_state(group, problem, design) -> None:
+    parameters = problem.beam_parameters(design)
     group.create_dataset(
         "physical_origins", data=np.asarray(jax.device_get(parameters.physical_origins))
     )

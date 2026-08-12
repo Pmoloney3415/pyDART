@@ -1,4 +1,6 @@
-"""Plot final optimized beam parameters against beam index."""
+"""Plot the overall-best optimized beam parameters against beam index."""
+
+# ruff: noqa: I001
 
 from __future__ import annotations
 
@@ -13,9 +15,21 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
+PARAMETER_FIELDS = (
+    "physical_origins",
+    "pointing_locations",
+    "power_fractions_of_maximum",
+    "spot_widths",
+    "spot_rotations",
+    "supergaussian_indices",
+)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot the final beam parameters from an optimization checkpoint."
+        description=(
+            "Plot the overall-best beam parameters from an optimization checkpoint."
+        )
     )
     parser.add_argument(
         "result",
@@ -40,22 +54,35 @@ def find_checkpoint(result: Path) -> Path:
     return checkpoints[0]
 
 
-def load_best_parameters(checkpoint: Path) -> tuple[dict[str, np.ndarray], float]:
-    with h5py.File(checkpoint, "r") as handle:
-        group = handle["global_best"]
-        parameters = {
-            name: np.asarray(group[name])
-            for name in (
-                "physical_origins",
-                "pointing_locations",
-                "power_fractions_of_maximum",
-                "spot_widths",
-                "spot_rotations",
-                "supergaussian_indices",
-            )
-        }
-        objective = float(group.attrs["objective"])
+def _load_parameter_group(group) -> tuple[dict[str, np.ndarray], float]:
+    parameters = {name: np.asarray(group[name]) for name in PARAMETER_FIELDS}
+    objective_name = "objective" if "objective" in group.attrs else "best_objective"
+    objective = float(group.attrs[objective_name])
     return parameters, objective
+
+
+def load_best_parameters(
+    checkpoint: Path,
+) -> tuple[dict[str, np.ndarray], float]:
+    with h5py.File(checkpoint, "r") as handle:
+        return _load_parameter_group(handle["global_best"])
+
+
+def load_restart_parameters(
+    checkpoint: Path,
+) -> list[tuple[int, dict[str, np.ndarray], float]]:
+    with h5py.File(checkpoint, "r") as handle:
+        restarts = []
+        for name in sorted(handle["restarts"], key=int):
+            group = handle["restarts"][name]
+            if any(field not in group for field in PARAMETER_FIELDS):
+                raise ValueError(
+                    "Restart parameters are unavailable in this checkpoint. "
+                    "Create it with the current pyDART version."
+                )
+            parameters, objective = _load_parameter_group(group)
+            restarts.append((int(name) + 1, parameters, objective))
+    return restarts
 
 
 def spherical_angles(cartesian: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -65,7 +92,12 @@ def spherical_angles(cartesian: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return azimuth, polar
 
 
-def plot_parameter_summary(parameters: dict[str, np.ndarray], objective: float):
+def plot_parameter_summary(
+    parameters: dict[str, np.ndarray],
+    objective: float,
+    *,
+    design_label: str = "Best optimization design",
+):
     beam_index = np.arange(1, len(parameters["power_fractions_of_maximum"]) + 1)
     origin_azimuth, origin_polar = spherical_angles(parameters["physical_origins"])
     pointing_azimuth, pointing_polar = spherical_angles(
@@ -111,7 +143,7 @@ def plot_parameter_summary(parameters: dict[str, np.ndarray], objective: float):
         axis.set_xlabel("Beam index")
         axis.set_xlim(0.5, beam_index[-1] + 0.5)
         axis.grid(alpha=0.25)
-    figure.suptitle(f"Best optimization design — objective {objective:.6e}")
+    figure.suptitle(f"{design_label} — objective {objective:.6e}")
     figure.tight_layout()
     return figure
 
@@ -119,18 +151,38 @@ def plot_parameter_summary(parameters: dict[str, np.ndarray], objective: float):
 def main(argv: list[str] | None = None) -> int:
     arguments = parse_args(argv)
     checkpoint = find_checkpoint(arguments.result)
-    parameters, objective = load_best_parameters(checkpoint)
-    figure = plot_parameter_summary(parameters, objective)
+    overall = load_best_parameters(checkpoint)
     output = (
         arguments.output.resolve()
         if arguments.output is not None
         else checkpoint.parent / "optimisation_parameter_summary.png"
     )
     output.parent.mkdir(parents=True, exist_ok=True)
-    figure.savefig(output, dpi=arguments.dpi, bbox_inches="tight")
+    save_parameter_plot(
+        overall,
+        output,
+        arguments.dpi,
+        design_label="Best overall optimization design",
+    )
+    return 0
+
+
+def save_parameter_plot(
+    result: tuple[dict[str, np.ndarray], float],
+    output: Path,
+    dpi: int,
+    *,
+    design_label: str,
+) -> None:
+    parameters, objective = result
+    figure = plot_parameter_summary(
+        parameters,
+        objective,
+        design_label=design_label,
+    )
+    figure.savefig(output, dpi=dpi, bbox_inches="tight")
     plt.close(figure)
     print(f"Saved {output}")
-    return 0
 
 
 if __name__ == "__main__":

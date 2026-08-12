@@ -196,6 +196,7 @@ class OptimisationRunner:
                 )
             stopped_for_time = stopped_for_time or restart_stopped_for_time
             self._restart_results.append(restart_result)
+            self._save_restart_best(restart_result.restart_index)
             self._persist(checkpoint=True, history_plot=True, snapshot=True)
             if stopped_for_time:
                 break
@@ -629,6 +630,37 @@ class OptimisationRunner:
                 self._timer.stop("io")
                 self._last_archived_history_index = self._best_record.history_index
             self._best_changed_since_snapshot = False
+
+    def _save_restart_best(self, restart_index: int) -> None:
+        """Write a stable full snapshot of one completed restart's best design."""
+        if not self.problem.config.run.save_best_simulation:
+            return
+        restart_best = min(
+            (
+                record
+                for record in self._history
+                if record.restart_index == restart_index
+            ),
+            key=lambda record: record.objective,
+        )
+        output_directory = optimisation_output_directory(self.problem)
+        restart_directory = (
+            output_directory
+            / "restart_best_simulations"
+            / f"restart_{restart_index + 1}"
+        )
+        if restart_directory.exists():
+            self._timer.start("io")
+            shutil.rmtree(restart_directory)
+            self._timer.stop("io")
+        self._timer.start("best_simulation_output")
+        save_simulation_snapshot(
+            self.problem,
+            restart_best,
+            restart_directory,
+            save_plots=self.problem.config.run.save_simulation_plots,
+        )
+        self._timer.stop("best_simulation_output")
 
     def _starting_designs(self) -> tuple[np.ndarray, ...]:
         restarts = self.problem.config.restarts

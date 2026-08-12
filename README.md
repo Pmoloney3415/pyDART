@@ -80,6 +80,12 @@ print(float(metrics.deposited_fraction))
 print(float(metrics.rms_nonuniformity))
 ```
 
+## Run an optimisation
+
+```shell
+uv run pydart-optimise configs/optimisations/six_beam_design_scipy.toml
+```
+
 ## Animate an optimization
 
 Install the optional post-processing dependencies and render an optimization
@@ -98,6 +104,25 @@ The script saves six-panel PNG frames under `animation_frames/` and combines
 them into `optimisation_history.mp4`. It requires the run to contain one
 optimization checkpoint and snapshots produced with
 `archive_previous_best_simulations = true`.
+
+## Plot optimization results
+
+```shell
+# Overall-best beam parameters
+python scripts/plot_optimisation_parameters.py results/optimisations/optimisation_80/
+
+# Per-restart beam parameters
+python scripts/plot_optimisation_restart_parameters.py results/optimisations/optimisation_80/
+
+# Animation-style frame for the overall-best result
+python scripts/plot_optimisation_best_result.py results/optimisations/optimisation_80/
+
+# Animation-style frames for every restart best
+python scripts/plot_optimisation_restart_results.py results/optimisations/optimisation_80/
+```
+
+Per-restart parameter images are written to `restart_parameter_plots/`, while
+per-restart result frames are written to `restart_result_plots/`.
 
 ## Development checks
 
