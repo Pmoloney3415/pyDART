@@ -3,23 +3,25 @@ index = 60
 solver = "scipy_lbfgsb"
 simulation_config = "../simulations/generic_60_beam_500um.toml"
 output_directory = "../../results/optimisations"
-maximum_iterations = 1000
+maximum_iterations = 10000
 device_iteration_chunk_size = 10
 objective_relative_tolerance = 1.0e-9
 projected_gradient_tolerance = 1.0e-6
-maximum_wall_time_seconds = 3600
-checkpoint_interval = 25
-history_plot_interval = 25
+maximum_wall_time_seconds = 10000
+checkpoint_interval = 500
+history_plot_interval = 500
 save_best_simulation = true
-save_simulation_plots = true
-archive_previous_best_simulations = true
+save_simulation_plots = false
+archive_previous_best_simulations = false
 
 [optimisation.restarts]
-number = 4
+number = 8
 include_base_design = false
 random_seed = 20260809
 
 [variables]
+# Put beam names here to hold all their variables fixed, for example
+# frozen_beams = ["beam_17", "beam_22"]
 frozen_beams = []
 
 [variables.power]

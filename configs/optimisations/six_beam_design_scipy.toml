@@ -8,15 +8,15 @@ device_iteration_chunk_size = 10
 objective_relative_tolerance = 1.0e-9
 projected_gradient_tolerance = 1.0e-6
 maximum_wall_time_seconds = 3600
-checkpoint_interval = 25
-history_plot_interval = 25
+checkpoint_interval = 500
+history_plot_interval = 500
 save_best_simulation = true
 save_simulation_plots = false
-archive_previous_best_simulations = true
+archive_previous_best_simulations = false
 
 [optimisation.restarts]
 number = 8
-include_base_design = true
+include_base_design = false
 random_seed = 20260809
 
 [variables]

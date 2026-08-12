@@ -16,8 +16,8 @@ l_max = 12
 
 [target]
 radius = 5.0e-4
-n_polar = 128
-n_azimuthal = 256
+n_polar = 64
+n_azimuthal = 128
 numerical_origin_radius_factor = 10.0
 
 [laser]

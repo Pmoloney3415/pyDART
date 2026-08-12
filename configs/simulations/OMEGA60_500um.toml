@@ -26,8 +26,8 @@ l_max = 20
 
 [target]
 radius = 5.0e-4          # m
-n_polar = 128            # theta cells
-n_azimuthal = 256        # phi cells
+n_polar = 64            # theta cells
+n_azimuthal = 128        # phi cells
 numerical_origin_radius_factor = 10.0
 
 
