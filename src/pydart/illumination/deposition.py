@@ -19,10 +19,11 @@ from pydart.model.target import Target
 @jax.tree_util.register_pytree_node_class
 @dataclass(frozen=True)
 class DepositionResult:
-    """Cell-integrated deposited powers in watts."""
+    """Smoothed cell maps and unsmoothed intercepted powers in watts."""
 
     per_beam: Array
     total: Array
+    unsmoothed_deposited_power_per_beam: Array
     target: Target
     beams: Beams
     incident_power: Array
@@ -35,6 +36,7 @@ class DepositionResult:
         children = (
             self.per_beam,
             self.total,
+            self.unsmoothed_deposited_power_per_beam,
             self.target,
             self.beams,
             self.incident_power,
@@ -70,6 +72,9 @@ class DepositionResult:
             deposition=self.total,
             target=self.target,
             incident_power=self.incident_power,
+            unsmoothed_deposited_power=jnp.sum(
+                self.unsmoothed_deposited_power_per_beam
+            ),
             l_max=self.l_max,
             simulation_index=self.simulation_index,
         )
@@ -98,15 +103,31 @@ def calculate_deposition(
         beams,
     )
     intensities = supergaussian_intensity(local_coordinates, beams)
-    area_projection = sample_areas[..., None] * projected_cosines_from_normals(
+    weighted_intensities = intensities * sample_areas[..., None]
+    smoothed_projection = projected_cosines_from_normals(
         sample_normals,
         beams,
         smoothing_epsilon=visibility_smoothing_epsilon,
     )
-    per_beam = jnp.sum(intensities * area_projection, axis=(-3, -2))
+    exact_projection = projected_cosines_from_normals(
+        sample_normals,
+        beams,
+        smoothing_epsilon=0.0,
+    )
+    per_beam = jnp.sum(
+        weighted_intensities * smoothed_projection,
+        axis=(-3, -2),
+    )
+    unsmoothed_deposited_power_per_beam = jnp.sum(
+        weighted_intensities * exact_projection,
+        axis=tuple(range(weighted_intensities.ndim - 1)),
+    )
     return DepositionResult(
         per_beam=per_beam,
         total=jnp.sum(per_beam, axis=-1),
+        unsmoothed_deposited_power_per_beam=(
+            unsmoothed_deposited_power_per_beam
+        ),
         target=target,
         beams=beams,
         incident_power=jnp.sum(beams.powers),

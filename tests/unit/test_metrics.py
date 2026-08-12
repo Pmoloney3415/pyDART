@@ -97,6 +97,7 @@ def test_hdf5_and_json_persistence_use_indexed_paths(tmp_path) -> None:
     result = DepositionResult(
         per_beam=deposition[..., None],
         total=deposition,
+        unsmoothed_deposited_power_per_beam=jnp.asarray([3.0 * jnp.pi]),
         target=target,
         beams=_plot_test_beams(),
         incident_power=jnp.asarray(4.0 * jnp.pi),
@@ -119,6 +120,9 @@ def test_hdf5_and_json_persistence_use_indexed_paths(tmp_path) -> None:
         assert handle.attrs["visibility_smoothing_epsilon"] == 0.05
         assert handle["deposition/total_cell_power"].shape == (128, 64)
         assert handle["deposition/per_beam_cell_power"].shape == (128, 64, 1)
+        assert handle[
+            "deposition/unsmoothed_deposited_power_per_beam"
+        ].shape == (1,)
         assert handle["harmonics/coefficients"].shape == (4, 7)
         assert np.iscomplexobj(handle["harmonics/coefficients"][:])
         assert handle["target/spherical_coordinates"].shape == (128, 64, 3)
@@ -126,7 +130,12 @@ def test_hdf5_and_json_persistence_use_indexed_paths(tmp_path) -> None:
     summary = json.loads(json_path.read_text(encoding="utf-8"))
     assert summary["simulation_index"] == 7
     assert summary["l_max"] == 3
-    np.testing.assert_allclose(summary["deposited_fraction"], 1.0, rtol=2e-4)
+    np.testing.assert_allclose(summary["deposited_fraction"], 0.75)
+    np.testing.assert_allclose(
+        summary["smoothed_deposited_fraction"],
+        1.0,
+        rtol=2e-4,
+    )
 
 
 def _plot_test_beams():

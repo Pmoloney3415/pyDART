@@ -14,6 +14,11 @@ bounds, optional frozen beam names, and objective weights. Physical port
 origins remain at their configured radius while their angular positions may
 be bounded or unconstrained on the facility sphere.
 
+`visibility_smoothing_epsilon` regularizes the surface deposition map used for
+RMS non-uniformity and spherical harmonics. Deposited power and deposited
+fraction are calculated separately with exact hard visibility, so smoothing
+does not create artificial intercepted power in those metrics or objectives.
+
 Optimization run controls live in `[optimisation]`. Set `solver` to
 `"scipy_lbfgsb"` (the default) or `"jaxopt_lbfgsb"`. Both L-BFGS-B backends
 use the normalized `[0, 1]` design bounds, with configurable objective and

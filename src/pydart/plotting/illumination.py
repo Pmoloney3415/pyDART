@@ -129,7 +129,7 @@ def plot_per_beam_deposited_fractions(result, ax=None):
         figure, ax = plt.subplots(figsize=(8, 4.5))
     else:
         figure = ax.figure
-    deposited = np.asarray(result.per_beam).sum(axis=(0, 1))
+    deposited = np.asarray(result.unsmoothed_deposited_power_per_beam)
     incident = np.asarray(result.beams.powers)
     fractions = deposited / incident
     beam_number = np.arange(result.beams.n_beams)

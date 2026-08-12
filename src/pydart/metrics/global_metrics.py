@@ -27,6 +27,8 @@ class MetricsResult:
     deposited_power: Array
     incident_power: Array
     deposited_fraction: Array
+    smoothed_deposited_power: Array
+    smoothed_deposited_fraction: Array
     mean_power_density: Array
     rms_nonuniformity: Array
     simulation_index: int = 0
@@ -41,6 +43,8 @@ class MetricsResult:
             self.deposited_power,
             self.incident_power,
             self.deposited_fraction,
+            self.smoothed_deposited_power,
+            self.smoothed_deposited_fraction,
             self.mean_power_density,
             self.rms_nonuniformity,
         )
@@ -67,6 +71,7 @@ def calculate_metrics(
     deposition: Array,
     target: Target,
     incident_power: Array,
+    unsmoothed_deposited_power: Array | None = None,
     l_max: int = 20,
     simulation_index: int = 0,
 ) -> MetricsResult:
@@ -88,9 +93,14 @@ def calculate_metrics(
     power_by_l = jnp.sum(jnp.abs(coefficients) ** 2, axis=1)
     normalized_power_by_l = power_by_l / power_by_l[0]
 
-    deposited_power = jnp.sum(deposition)
+    smoothed_deposited_power = jnp.sum(deposition)
+    deposited_power = (
+        smoothed_deposited_power
+        if unsmoothed_deposited_power is None
+        else jnp.asarray(unsmoothed_deposited_power, dtype=jnp.float64)
+    )
     total_area = jnp.sum(cell_areas)
-    mean_power_density = deposited_power / total_area
+    mean_power_density = smoothed_deposited_power / total_area
     variance = (
         jnp.sum((power_density - mean_power_density) ** 2 * cell_areas) / total_area
     )
@@ -103,6 +113,8 @@ def calculate_metrics(
         deposited_power=deposited_power,
         incident_power=incident_power,
         deposited_fraction=deposited_power / incident_power,
+        smoothed_deposited_power=smoothed_deposited_power,
+        smoothed_deposited_fraction=smoothed_deposited_power / incident_power,
         mean_power_density=mean_power_density,
         rms_nonuniformity=jnp.sqrt(variance) / mean_power_density,
         simulation_index=simulation_index,
