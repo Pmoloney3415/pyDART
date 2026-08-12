@@ -80,25 +80,14 @@ def validate_optimisation_config(config: OptimisationConfig) -> None:
     ):
         raise ValueError("At least one variable type must be enabled.")
 
-    for degree, weight in config.objective.mode_weights:
-        if degree < 0 or degree > config.simulation.metrics.l_max:
-            raise ValueError(f"Objective mode degree {degree} is unavailable.")
-        if weight < 0.0:
-            raise ValueError("Objective weights cannot be negative.")
-    if config.objective.rms_weight < 0.0:
+    if config.objective.deposition_log_weight < 0.0:
         raise ValueError("Objective weights cannot be negative.")
-    if config.objective.deposited_power_weight < 0.0:
-        raise ValueError("Objective weights cannot be negative.")
-    if (
-        config.objective.l1_mode_weight is not None
-        and config.objective.l1_mode_weight < 0.0
-    ):
-        raise ValueError("The l=1 mode weight cannot be negative.")
-    if (
-        config.objective.mode_decrease_power is not None
-        and config.objective.mode_decrease_power < 0.0
-    ):
-        raise ValueError("The mode decrease power cannot be negative.")
+    if config.objective.deposition_log_epsilon <= 0.0:
+        raise ValueError("The deposition logarithm epsilon must be positive.")
+    if config.objective.acceptable_rms_nonuniformity <= 0.0:
+        raise ValueError("The acceptable RMS nonuniformity must be positive.")
+    if config.objective.rms_power <= 0.0:
+        raise ValueError("The RMS power must be positive.")
 
 
 def _validate_surface_variables(name: str, variables: SurfaceVariableConfig) -> None:

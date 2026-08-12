@@ -41,8 +41,10 @@ def load_optimisation_checkpoint(path: str | Path):
                 function_evaluations=int(history["function_evaluations"][index]),
                 elapsed_seconds=float(history["elapsed_seconds"][index]),
                 objective=float(history["objective"][index]),
-                rms_contribution=float(history["rms_contribution"][index]),
-                mode_contribution=float(history["mode_contribution"][index]),
+                symmetry_contribution=float(
+                    history["symmetry_contribution"][index]
+                ),
+                rms_ratio_power=float(history["rms_ratio_power"][index]),
                 deposition_contribution=float(
                     history["deposition_contribution"][index]
                 ),
@@ -55,9 +57,6 @@ def load_optimisation_checkpoint(path: str | Path):
                     history["projected_gradient_norm"][index]
                 ),
                 design=np.asarray(history["design"][index]),
-                normalized_power_by_l=np.asarray(
-                    history["normalized_power_by_l"][index]
-                ),
             )
             for index in range(count)
         )
@@ -139,8 +138,8 @@ def save_optimisation_checkpoint(
             "function_evaluations",
             "elapsed_seconds",
             "objective",
-            "rms_contribution",
-            "mode_contribution",
+            "symmetry_contribution",
+            "rms_ratio_power",
             "deposition_contribution",
             "rms_nonuniformity",
             "deposited_capacity_fraction",

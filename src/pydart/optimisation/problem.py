@@ -29,21 +29,19 @@ class ParameterBlock:
 class ObjectiveTerms:
     """JAX-compatible objective components and physical diagnostics."""
 
-    rms_contribution: Array
-    mode_contribution: Array
+    symmetry_contribution: Array
+    rms_ratio_power: Array
     deposition_contribution: Array
     rms_nonuniformity: Array
     deposited_capacity_fraction: Array
-    normalized_power_by_l: Array
 
     def tree_flatten(self):
         return (
-            self.rms_contribution,
-            self.mode_contribution,
+            self.symmetry_contribution,
+            self.rms_ratio_power,
             self.deposition_contribution,
             self.rms_nonuniformity,
             self.deposited_capacity_fraction,
-            self.normalized_power_by_l,
         ), None
 
     @classmethod
@@ -252,29 +250,40 @@ class OptimisationProblem:
         return self.objective_with_aux(design)[0]
 
     def objective_with_aux(self, design: Array) -> tuple[Array, ObjectiveTerms]:
-        """Return scalar loss together with components used for monitoring."""
-        metrics = self.metrics(design)
-        objective = self.config.objective
-        rms_contribution = objective.rms_weight * metrics.rms_nonuniformity
-        mode_contribution = jnp.asarray(0.0, dtype=rms_contribution.dtype)
-        for degree, weight in objective.mode_weights:
-            mode_contribution = (
-                mode_contribution + weight * metrics.normalized_power_by_l[degree]
-            )
+        r"""Return ``-w log(D) + log(1 + (R/R0)**p)`` and diagnostics."""
+        deposition = self.simulation(design).run()
+        cell_areas = deposition.target.cell_areas
+        total_area = jnp.sum(cell_areas)
+        smoothed_deposited_power = jnp.sum(deposition.total)
+        mean_power_density = smoothed_deposited_power / total_area
+        power_density = deposition.total / cell_areas
+        variance = (
+            jnp.sum((power_density - mean_power_density) ** 2 * cell_areas)
+            / total_area
+        )
+        rms_nonuniformity = jnp.sqrt(variance) / mean_power_density
         deposited_capacity_fraction = (
-            metrics.deposited_power / self.base_simulation.beams.facility_power
+            jnp.sum(deposition.unsmoothed_deposited_power_per_beam)
+            / self.base_simulation.beams.facility_power
         )
-        deposition_contribution = objective.deposited_power_weight * (
-            1.0 - deposited_capacity_fraction
+        objective = self.config.objective
+        rms_ratio_power = (
+            rms_nonuniformity / objective.acceptable_rms_nonuniformity
+        ) ** objective.rms_power
+        symmetry_contribution = jnp.log1p(rms_ratio_power)
+        safe_deposited_fraction = (
+            deposited_capacity_fraction + objective.deposition_log_epsilon
         )
-        loss = rms_contribution + mode_contribution + deposition_contribution
+        deposition_contribution = -objective.deposition_log_weight * jnp.log(
+            safe_deposited_fraction
+        )
+        loss = symmetry_contribution + deposition_contribution
         return loss, ObjectiveTerms(
-            rms_contribution=rms_contribution,
-            mode_contribution=mode_contribution,
+            symmetry_contribution=symmetry_contribution,
+            rms_ratio_power=rms_ratio_power,
             deposition_contribution=deposition_contribution,
-            rms_nonuniformity=metrics.rms_nonuniformity,
+            rms_nonuniformity=rms_nonuniformity,
             deposited_capacity_fraction=deposited_capacity_fraction,
-            normalized_power_by_l=metrics.normalized_power_by_l,
         )
 
     def value_and_gradient(self, design: Array) -> tuple[Array, Array]:

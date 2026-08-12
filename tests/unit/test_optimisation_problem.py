@@ -14,7 +14,9 @@ CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
 
 
 def _six_beam_problem(*, coarse: bool = False) -> OptimisationProblem:
-    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    config = load_optimisation_config(
+        CONFIG_DIRECTORY / "six_beam_design_scipy.toml"
+    )
     if coarse:
         simulation = replace(
             config.simulation,
@@ -118,7 +120,9 @@ def test_origin_motion_transports_unadjusted_pointing() -> None:
 
 
 def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
-    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    config = load_optimisation_config(
+        CONFIG_DIRECTORY / "six_beam_design_scipy.toml"
+    )
     unfrozen_problem = OptimisationProblem(config)
     variables = replace(config.variables, frozen_beams=("beam_1",))
     problem = OptimisationProblem(replace(config, variables=variables))
@@ -140,6 +144,7 @@ def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
 
 def test_objective_components_sum_to_finite_value_with_gradient() -> None:
     problem = _six_beam_problem(coarse=True)
+    metrics = problem.metrics(problem.initial_parameters)
 
     (value, terms), gradient = jax.value_and_grad(
         problem.objective_with_aux, has_aux=True
@@ -147,11 +152,49 @@ def test_objective_components_sum_to_finite_value_with_gradient() -> None:
 
     np.testing.assert_allclose(
         value,
-        terms.rms_contribution
-        + terms.mode_contribution
-        + terms.deposition_contribution,
+        terms.symmetry_contribution + terms.deposition_contribution,
+    )
+    expected_rms_ratio_power = (
+        terms.rms_nonuniformity
+        / problem.config.objective.acceptable_rms_nonuniformity
+    ) ** problem.config.objective.rms_power
+    np.testing.assert_allclose(terms.rms_ratio_power, expected_rms_ratio_power)
+    np.testing.assert_allclose(
+        terms.symmetry_contribution,
+        jnp.log1p(expected_rms_ratio_power),
+    )
+    safe_deposition = (
+        terms.deposited_capacity_fraction
+        + problem.config.objective.deposition_log_epsilon
+    )
+    np.testing.assert_allclose(
+        terms.deposition_contribution,
+        -problem.config.objective.deposition_log_weight * jnp.log(safe_deposition),
+    )
+    np.testing.assert_allclose(terms.rms_nonuniformity, metrics.rms_nonuniformity)
+    np.testing.assert_allclose(
+        terms.deposited_capacity_fraction,
+        metrics.deposited_power / problem.base_simulation.beams.facility_power,
     )
     assert bool(jnp.isfinite(value))
     assert gradient.shape == (problem.n_parameters,)
     assert bool(jnp.all(jnp.isfinite(gradient)))
     assert float(jnp.linalg.norm(gradient)) > 0.0
+
+
+def test_high_harmonic_resolution_is_excluded_from_objective_jit() -> None:
+    problem = _six_beam_problem(coarse=True)
+    simulation = replace(
+        problem.config.simulation,
+        metrics=replace(problem.config.simulation.metrics, l_max=20),
+    )
+    problem = OptimisationProblem(replace(problem.config, simulation=simulation))
+    compiled_value_and_gradient = jax.jit(
+        jax.value_and_grad(problem.objective_with_aux, has_aux=True)
+    )
+
+    (value, terms), gradient = compiled_value_and_gradient(problem.initial_parameters)
+
+    assert bool(jnp.isfinite(value))
+    assert bool(jnp.all(jnp.isfinite(gradient)))
+    assert terms.rms_nonuniformity.shape == ()

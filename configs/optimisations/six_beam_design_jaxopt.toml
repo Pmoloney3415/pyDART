@@ -1,6 +1,6 @@
 [optimisation]
-index = 5
-solver = "scipy_lbfgsb"
+index = 90
+solver = "jaxopt_lbfgsb"
 simulation_config = "../simulations/six_beam_500um.toml"
 output_directory = "../../results/optimisations"
 maximum_iterations = 1000
@@ -8,15 +8,15 @@ device_iteration_chunk_size = 10
 objective_relative_tolerance = 1.0e-9
 projected_gradient_tolerance = 1.0e-6
 maximum_wall_time_seconds = 3600
-checkpoint_interval = 25
-history_plot_interval = 25
+checkpoint_interval = 500
+history_plot_interval = 500
 save_best_simulation = true
 save_simulation_plots = false
-archive_previous_best_simulations = true
+archive_previous_best_simulations = false
 
 [optimisation.restarts]
-number = 4
-include_base_design = true
+number = 8
+include_base_design = false
 random_seed = 20260809
 
 [variables]
@@ -51,8 +51,7 @@ minimum_supergaussian_index = 1.5
 maximum_supergaussian_index = 8.0
 
 [objective]
-rms_weight = 1.0
-deposited_power_weight = 0.5
-mode_weight_option = "decreasing"
-l1_mode_weight = 1.0
-mode_decrease_power = 0.5
+deposition_log_weight = 100.0
+deposition_log_epsilon = 1.0e-8
+acceptable_rms_nonuniformity = 0.01
+rms_power = 2.0

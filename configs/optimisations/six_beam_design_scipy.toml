@@ -51,8 +51,7 @@ minimum_supergaussian_index = 1.5
 maximum_supergaussian_index = 8.0
 
 [objective]
-rms_weight = 1.0
-deposited_power_weight = 0.5
-mode_weight_option = "decreasing"
-l1_mode_weight = 1.0
-mode_decrease_power = 0.5
+deposition_log_weight = 100.0
+deposition_log_epsilon = 1.0e-8
+acceptable_rms_nonuniformity = 0.01
+rms_power = 2.0

@@ -75,12 +75,10 @@ class VariableConfig:
 
 @dataclass(frozen=True)
 class ObjectiveConfig:
-    rms_weight: float
-    deposited_power_weight: float
-    mode_weight_option: str
-    l1_mode_weight: float | None
-    mode_decrease_power: float | None
-    mode_weights: tuple[tuple[int, float], ...]
+    deposition_log_weight: float
+    deposition_log_epsilon: float
+    acceptable_rms_nonuniformity: float
+    rms_power: float
 
 
 @dataclass(frozen=True)
@@ -91,21 +89,6 @@ class OptimisationConfig:
     simulation: PyDARTConfig
     restarts: RestartConfig
     source_path: Path
-
-
-def decreasing_mode_weights(
-    l_max: int,
-    l1_mode_weight: float,
-    mode_decrease_power: float,
-) -> tuple[tuple[int, float], ...]:
-    """Return weights ``w_l = w_1 / l**p`` through the simulation ``l_max``."""
-    return tuple(
-        (
-            degree,
-            l1_mode_weight / degree**mode_decrease_power,
-        )
-        for degree in range(1, l_max + 1)
-    )
 
 
 def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
@@ -158,48 +141,36 @@ def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
         spot=_read_spot_variables(variable_data["spot"]),
     )
     objective_data = data.get("objective", {})
-    mode_weight_option = str(
-        objective_data.get(
-            "mode_weight_option",
-            "explicit" if "mode_weights" in objective_data else "decreasing",
+    obsolete_keys = {
+        "deposited_power_weight",
+        "deposition_exponential_weight",
+        "symmetry_log_epsilon",
+        "deposition_shortfall_weight",
+        "deposition_huber_width",
+        "objective_log_epsilon",
+        "rms_weight",
+        "mode_weight_option",
+        "mode_weights",
+        "l1_mode_weight",
+        "mode_decrease_power",
+    } & objective_data.keys()
+    if obsolete_keys:
+        raise ValueError(
+            f"Obsolete objective options {sorted(obsolete_keys)} have been replaced "
+            "by deposition_log_weight, deposition_log_epsilon, "
+            "acceptable_rms_nonuniformity, and rms_power."
         )
-    )
-    l1_mode_weight = None
-    mode_decrease_power = None
-    if mode_weight_option == "explicit":
-        if "mode_weights" not in objective_data:
-            raise ValueError(
-                "Explicit mode weighting requires [objective.mode_weights]."
-            )
-        mode_weights = tuple(
-            sorted(
-                (int(degree), float(weight))
-                for degree, weight in objective_data["mode_weights"].items()
-            )
-        )
-    elif mode_weight_option == "decreasing":
-        if "mode_weights" in objective_data:
-            raise ValueError(
-                "Do not provide explicit mode_weights with decreasing weighting."
-            )
-        l1_mode_weight = float(objective_data.get("l1_mode_weight", 1.0))
-        mode_decrease_power = float(objective_data.get("mode_decrease_power", 2.0))
-        mode_weights = decreasing_mode_weights(
-            simulation.metrics.l_max,
-            l1_mode_weight,
-            mode_decrease_power,
-        )
-    else:
-        raise ValueError("mode_weight_option must be 'explicit' or 'decreasing'.")
     objective = ObjectiveConfig(
-        rms_weight=float(objective_data.get("rms_weight", 1.0)),
-        deposited_power_weight=float(
-            objective_data.get("deposited_power_weight", 0.25)
+        deposition_log_weight=float(
+            objective_data.get("deposition_log_weight", 2.0)
         ),
-        mode_weight_option=mode_weight_option,
-        l1_mode_weight=l1_mode_weight,
-        mode_decrease_power=mode_decrease_power,
-        mode_weights=mode_weights,
+        deposition_log_epsilon=float(
+            objective_data.get("deposition_log_epsilon", 1.0e-8)
+        ),
+        acceptable_rms_nonuniformity=float(
+            objective_data.get("acceptable_rms_nonuniformity", 0.01)
+        ),
+        rms_power=float(objective_data.get("rms_power", 2.0)),
     )
     config = OptimisationConfig(
         run=run,

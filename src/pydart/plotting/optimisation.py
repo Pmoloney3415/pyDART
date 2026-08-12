@@ -22,30 +22,32 @@ def plot_optimisation_history(history: Sequence[IterationRecord]):
         records = [
             record for record in history if record.restart_index == restart_index
         ]
-        iteration = np.asarray([record.iteration for record in records])
+        iteration = np.asarray([record.iteration for record in records]) + 1
         label = f"restart {restart_index + 1}"
-        axes[0, 0].semilogy(
+        axes[0, 0].loglog(
             iteration,
             _positive_for_log([record.objective for record in records]),
             marker=".",
             alpha=0.75,
             label=label,
         )
-        axes[0, 2].semilogy(
+        axes[0, 2].loglog(
             iteration,
             _positive_for_log([record.rms_nonuniformity for record in records]),
             marker=".",
             alpha=0.75,
             label=label,
         )
-        axes[1, 0].plot(
+        axes[1, 0].loglog(
             iteration,
-            [record.deposited_capacity_fraction for record in records],
+            _positive_for_log(
+                [record.deposited_capacity_fraction for record in records]
+            ),
             marker=".",
             alpha=0.75,
             label=label,
         )
-        axes[1, 1].semilogy(
+        axes[1, 1].loglog(
             iteration,
             _positive_for_log([record.projected_gradient_norm for record in records]),
             alpha=0.75,
@@ -61,19 +63,15 @@ def plot_optimisation_history(history: Sequence[IterationRecord]):
     best_records = [
         record for record in history if record.restart_index == best_restart_index
     ]
-    best_iteration = np.asarray([record.iteration for record in best_records])
-    axes[0, 1].semilogy(
+    best_iteration = np.asarray([record.iteration for record in best_records]) + 1
+    axes[0, 1].loglog(
         best_iteration,
-        _positive_for_log([record.rms_contribution for record in best_records]),
-        label="RMS",
+        _positive_for_log(
+            [record.symmetry_contribution for record in best_records]
+        ),
+        label="symmetry",
     )
-    axes[0, 1].semilogy(
-        best_iteration,
-        _positive_for_log([record.mode_contribution for record in best_records]),
-        linestyle="--",
-        label="modes",
-    )
-    axes[0, 1].semilogy(
+    axes[0, 1].loglog(
         best_iteration,
         _positive_for_log([record.deposition_contribution for record in best_records]),
         linestyle=":",
@@ -96,25 +94,25 @@ def plot_optimisation_history(history: Sequence[IterationRecord]):
     )
     axes[1, 2].set_xticks(display_restart_indices)
 
-    axes[0, 0].set(title="Objective", xlabel="Accepted iteration", ylabel="Loss")
+    axes[0, 0].set(title="Objective", xlabel="Accepted iteration + 1", ylabel="Loss")
     axes[0, 1].set(
         title=f"Objective components (best: restart {best_restart_index + 1})",
-        xlabel="Accepted iteration",
+        xlabel="Accepted iteration + 1",
         ylabel="Contribution",
     )
     axes[0, 2].set(
         title="Illumination nonuniformity",
-        xlabel="Accepted iteration",
+        xlabel="Accepted iteration + 1",
         ylabel="RMS / mean",
     )
     axes[1, 0].set(
         title="Deposited facility capacity",
-        xlabel="Accepted iteration",
+        xlabel="Accepted iteration + 1",
         ylabel="Deposited / facility maximum",
     )
     axes[1, 1].set(
         title="Gradient convergence",
-        xlabel="Accepted iteration",
+        xlabel="Accepted iteration + 1",
         ylabel="L2 norm",
     )
     axes[1, 2].set(

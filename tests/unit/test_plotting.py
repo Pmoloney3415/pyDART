@@ -103,15 +103,14 @@ def test_optimisation_history_creates_figure() -> None:
             function_evaluations=iteration + 1,
             elapsed_seconds=float(iteration),
             objective=objective,
-            rms_contribution=objective * 0.6,
-            mode_contribution=objective * 0.3,
+            symmetry_contribution=objective * 0.9,
+            rms_ratio_power=objective * 0.6,
             deposition_contribution=objective * 0.1,
             rms_nonuniformity=objective * 0.5,
             deposited_capacity_fraction=0.9,
             gradient_norm=objective * 2.0,
             projected_gradient_norm=objective,
             design=np.zeros(2),
-            normalized_power_by_l=np.ones(3),
         )
 
     history = (

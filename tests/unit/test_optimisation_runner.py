@@ -47,21 +47,17 @@ def _small_six_beam_problem(
         checkpoint_interval=checkpoint_interval,
         history_plot_interval=checkpoint_interval,
         maximum_wall_time_seconds=120.0,
-        save_best_simulation=False,
+        save_best_simulation=True,
+        save_simulation_plots=False,
         archive_previous_best_simulations=False,
     )
     restarts = replace(config.restarts, number=1)
-    objective = replace(
-        config.objective,
-        mode_weights=config.objective.mode_weights[:4],
-    )
     return OptimisationProblem(
         replace(
             config,
             simulation=simulation,
             run=run,
             restarts=restarts,
-            objective=objective,
         )
     )
 

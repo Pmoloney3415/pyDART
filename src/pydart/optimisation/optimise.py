@@ -38,15 +38,14 @@ class IterationRecord:
     function_evaluations: int
     elapsed_seconds: float
     objective: float
-    rms_contribution: float
-    mode_contribution: float
+    symmetry_contribution: float
+    rms_ratio_power: float
     deposition_contribution: float
     rms_nonuniformity: float
     deposited_capacity_fraction: float
     gradient_norm: float
     projected_gradient_norm: float
     design: np.ndarray
-    normalized_power_by_l: np.ndarray
 
 
 @dataclass(frozen=True)
@@ -150,12 +149,6 @@ class OptimisationRunner:
             if best.design.shape != (problem.n_parameters,):
                 raise ValueError(
                     "Checkpoint design size does not match this optimization problem."
-                )
-            if best.normalized_power_by_l.shape != (
-                problem.config.simulation.metrics.l_max + 1,
-            ):
-                raise ValueError(
-                    "Checkpoint harmonic resolution does not match this problem."
                 )
             self._history.extend(history)
             self._restart_results.extend(restart_results)
@@ -556,17 +549,14 @@ class OptimisationRunner:
             function_evaluations=function_evaluations,
             elapsed_seconds=self._elapsed(),
             objective=value,
-            rms_contribution=float(terms.rms_contribution),
-            mode_contribution=float(terms.mode_contribution),
+            symmetry_contribution=float(terms.symmetry_contribution),
+            rms_ratio_power=float(terms.rms_ratio_power),
             deposition_contribution=float(terms.deposition_contribution),
             rms_nonuniformity=float(terms.rms_nonuniformity),
             deposited_capacity_fraction=float(terms.deposited_capacity_fraction),
             gradient_norm=float(np.linalg.norm(gradient)),
             projected_gradient_norm=float(np.linalg.norm(projected_gradient)),
             design=design,
-            normalized_power_by_l=np.asarray(
-                terms.normalized_power_by_l, dtype=np.float64
-            ).copy(),
         )
         self._history.append(record)
         if self._best_record is None or record.objective < self._best_record.objective:
