@@ -82,9 +82,25 @@ print(float(metrics.rms_nonuniformity))
 
 ## Run an optimisation
 
+The default production deck is the accelerator-oriented 48-beam study. It
+optimises every supported beam parameter and keeps GPU-to-host communication
+and progress plotting deliberately sparse:
+
 ```shell
-uv run pydart-optimise configs/optimisations/six_beam_design_scipy.toml
+uv run pydart-optimise configs/optimisations/generic_48_beam_design.toml
 ```
+
+The equivalent CPU deck uses the same simulation and restart seed:
+
+```shell
+uv run pydart-optimise configs/optimisations/generic_48_beam_design_cpu.toml
+```
+
+For an interactive run report, open
+`notebooks/run_and_analyse_optimisations.ipynb`. It can run either deck or both,
+checks accelerator visibility before a GPU run, and displays convergence,
+routine timings, optimisation history, the overall best simulation and beam
+parameters, and the best result from every restart.
 
 ## Animate an optimization
 

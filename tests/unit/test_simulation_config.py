@@ -23,6 +23,7 @@ CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "simulations"
     "filename",
     [
         "OMEGA60_500um.toml",
+        "generic_48_beam_500um.toml",
         "generic_60_beam_500um.toml",
         "six_beam_500um.toml",
     ],

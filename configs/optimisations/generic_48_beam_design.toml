@@ -1,0 +1,59 @@
+[optimisation]
+index = 48
+solver = "jaxopt_lbfgsb"
+simulation_config = "../simulations/generic_48_beam_500um.toml"
+output_directory = "../../results/optimisations"
+maximum_iterations = 10000
+device_iteration_chunk_size = 1000
+objective_relative_tolerance = 1.0e-9
+projected_gradient_tolerance = 1.0e-6
+maximum_wall_time_seconds = 10000
+checkpoint_interval = 5000
+history_plot_interval = 5000
+save_best_simulation = true
+save_simulation_plots = false
+archive_previous_best_simulations = false
+
+[optimisation.restarts]
+number = 8
+include_base_design = false
+random_seed = 20260812
+
+[variables]
+# All supported beam parameters are free for all 48 beams.
+frozen_beams = []
+
+[variables.power]
+enabled = true
+minimum_fraction_of_maximum = 0.0
+maximum_fraction_of_maximum = 1.0
+
+[variables.origin]
+enabled = true
+constraint = "unconstrained"
+
+[variables.pointing]
+enabled = true
+constraint = "bounded"
+maximum_angular_displacement_degrees = 80.0
+
+[variables.spot]
+width_enabled = true
+force_circular = false
+minimum_width_x = 100e-6
+maximum_width_x = 600e-6
+minimum_width_y = 100e-6
+maximum_width_y = 600e-6
+rotation_enabled = true
+minimum_rotation_degrees = 0.0
+maximum_rotation_degrees = 180.0
+supergaussian_index_enabled = true
+minimum_supergaussian_index = 1.5
+maximum_supergaussian_index = 8.0
+
+[objective]
+deposition_log_weight = 100.0
+deposition_log_epsilon = 1.0e-8
+acceptable_rms_nonuniformity = 0.01
+rms_power = 2.0
+

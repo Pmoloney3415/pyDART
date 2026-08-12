@@ -33,6 +33,49 @@ def test_bundled_optimisation_configs_load(filename: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("filename", "solver", "index", "chunk_size", "output_interval"),
+    [
+        (
+            "generic_48_beam_design.toml",
+            "jaxopt_lbfgsb",
+            48,
+            1000,
+            5000,
+        ),
+        (
+            "generic_48_beam_design_cpu.toml",
+            "scipy_lbfgsb",
+            148,
+            10,
+            500,
+        ),
+    ],
+)
+def test_48_beam_optimisation_configs(
+    filename: str,
+    solver: str,
+    index: int,
+    chunk_size: int,
+    output_interval: int,
+) -> None:
+    config = load_optimisation_config(CONFIG_DIRECTORY / filename)
+
+    assert config.run.solver == solver
+    assert config.run.index == index
+    assert config.run.device_iteration_chunk_size == chunk_size
+    assert config.run.checkpoint_interval == output_interval
+    assert config.run.history_plot_interval == output_interval
+    assert config.simulation.laser.n_beams == 48
+    assert config.variables.power.enabled
+    assert config.variables.origin.enabled
+    assert config.variables.pointing.enabled
+    assert config.variables.spot.width_enabled
+    assert config.variables.spot.rotation_enabled
+    assert config.variables.spot.supergaussian_index_enabled
+    assert not config.variables.frozen_beams
+
+
+@pytest.mark.parametrize(
     "case",
     [
         "unknown_beam",

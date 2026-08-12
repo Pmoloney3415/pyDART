@@ -25,6 +25,15 @@ use the normalized `[0, 1]` design bounds, with configurable objective and
 projected-gradient tolerances, wall time, checkpoint intervals, and
 history-plot intervals. `[optimisation.restarts]` controls the total number of
 starts, whether the base design is included, and the reproducible random seed.
+
+`generic_48_beam_design.toml` is the default GPU production deck and
+`generic_48_beam_design_cpu.toml` is its CPU counterpart. Both reference the
+same 48-beam spherical-Fibonacci simulation and optimise power, port origin,
+pointing, both spot widths, spot rotation, and super-Gaussian index. The GPU
+deck dispatches up to 1000 accepted iterations per device chunk and writes
+checkpoints/history plots only every 5000 iterations (plus the initial and
+final outputs).
+
 For JAXopt, `device_iteration_chunk_size` controls the maximum number of
 accepted iterations compiled and dispatched together before diagnostics return
 to the host. It defaults to `10`; checkpoint and plot boundaries can shorten a
