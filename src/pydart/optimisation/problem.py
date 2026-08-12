@@ -413,10 +413,17 @@ def _bounded_surface_offsets(
     reference: Array, values: Array, maximum_angle: Array
 ) -> Array:
     first, second = _surface_basis(reference)
-    tangent_components = (2.0 * values - 1.0) * maximum_angle
-    norm = jnp.sqrt(jnp.sum(tangent_components**2, axis=-1) + 1.0e-30)
-    scale = jnp.minimum(1.0, maximum_angle / norm)
-    tangent_components = tangent_components * scale[:, None]
+    square = 2.0 * values - 1.0
+    x = square[:, 0]
+    y = square[:, 1]
+    disk = jnp.stack(
+        (
+            x * jnp.sqrt(1.0 - 0.5 * y**2),
+            y * jnp.sqrt(1.0 - 0.5 * x**2),
+        ),
+        axis=-1,
+    )
+    tangent_components = disk * maximum_angle
     angle = jnp.sqrt(jnp.sum(tangent_components**2, axis=-1) + 1.0e-30)
     tangent = tangent_components[:, 0:1] * first + tangent_components[:, 1:2] * second
     return (

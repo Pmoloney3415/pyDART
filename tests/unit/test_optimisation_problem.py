@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import numpy as np
 
 from pydart.config.optimisation_config import load_optimisation_config
 from pydart.optimisation import OptimisationProblem
+from pydart.optimisation.problem import _bounded_surface_offsets
 
 CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
 
@@ -117,6 +119,43 @@ def test_origin_motion_transports_unadjusted_pointing() -> None:
 
     np.testing.assert_allclose(origin_direction, moved_direction, atol=1e-6)
     np.testing.assert_allclose(pointing_direction, moved_direction, atol=1e-6)
+
+
+def test_bounded_pointing_uses_smooth_square_to_disk_map() -> None:
+    maximum_angle = jnp.deg2rad(45.0)
+    reference = jnp.asarray([[1.0, 0.0, 0.0]])
+
+    def angular_offset(values: Sequence[float]) -> float:
+        direction = _bounded_surface_offsets(
+            reference, jnp.asarray([values]), maximum_angle
+        )[0]
+        return float(jnp.arccos(jnp.clip(jnp.dot(reference[0], direction), -1.0, 1.0)))
+
+    center = angular_offset([0.5, 0.5])
+    edge = angular_offset([1.0, 0.5])
+    corner = angular_offset([1.0, 1.0])
+    formerly_clipped_interior = angular_offset([0.9, 0.9])
+
+    np.testing.assert_allclose(center, 0.0, atol=1e-7)
+    np.testing.assert_allclose(edge, maximum_angle, atol=1e-6)
+    np.testing.assert_allclose(corner, maximum_angle, atol=1e-6)
+    assert center < formerly_clipped_interior < corner
+
+
+def test_bounded_pointing_retains_radial_gradient_outside_unit_circle() -> None:
+    maximum_angle = jnp.deg2rad(45.0)
+    reference = jnp.asarray([[1.0, 0.0, 0.0]])
+    values = jnp.asarray([0.9, 0.9])
+
+    jacobian = jax.jacrev(
+        lambda point: _bounded_surface_offsets(
+            reference, point[None, :], maximum_angle
+        )[0]
+    )(values)
+    radial_change = jacobian @ jnp.asarray([1.0, 1.0])
+
+    assert bool(jnp.all(jnp.isfinite(jacobian)))
+    assert float(jnp.linalg.norm(radial_change)) > 1.0e-3
 
 
 def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
