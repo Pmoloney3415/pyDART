@@ -86,9 +86,7 @@ def test_48_beam_optimisation_configs(
     ],
 )
 def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
-    config = load_optimisation_config(
-        CONFIG_DIRECTORY / "six_beam_design_scipy.toml"
-    )
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
     if case == "unknown_beam":
         config = replace(
             config,

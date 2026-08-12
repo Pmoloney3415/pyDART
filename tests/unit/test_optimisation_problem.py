@@ -16,9 +16,7 @@ CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
 
 
 def _six_beam_problem(*, coarse: bool = False) -> OptimisationProblem:
-    config = load_optimisation_config(
-        CONFIG_DIRECTORY / "six_beam_design_scipy.toml"
-    )
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
     if coarse:
         simulation = replace(
             config.simulation,
@@ -159,9 +157,7 @@ def test_bounded_pointing_retains_radial_gradient_outside_unit_circle() -> None:
 
 
 def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
-    config = load_optimisation_config(
-        CONFIG_DIRECTORY / "six_beam_design_scipy.toml"
-    )
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
     unfrozen_problem = OptimisationProblem(config)
     variables = replace(config.variables, frozen_beams=("beam_1",))
     problem = OptimisationProblem(replace(config, variables=variables))
@@ -194,8 +190,7 @@ def test_objective_components_sum_to_finite_value_with_gradient() -> None:
         terms.symmetry_contribution + terms.deposition_contribution,
     )
     expected_rms_ratio_power = (
-        terms.rms_nonuniformity
-        / problem.config.objective.acceptable_rms_nonuniformity
+        terms.rms_nonuniformity / problem.config.objective.acceptable_rms_nonuniformity
     ) ** problem.config.objective.rms_power
     np.testing.assert_allclose(terms.rms_ratio_power, expected_rms_ratio_power)
     np.testing.assert_allclose(

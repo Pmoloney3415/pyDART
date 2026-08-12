@@ -125,9 +125,7 @@ def calculate_deposition(
     return DepositionResult(
         per_beam=per_beam,
         total=jnp.sum(per_beam, axis=-1),
-        unsmoothed_deposited_power_per_beam=(
-            unsmoothed_deposited_power_per_beam
-        ),
+        unsmoothed_deposited_power_per_beam=(unsmoothed_deposited_power_per_beam),
         target=target,
         beams=beams,
         incident_power=jnp.sum(beams.powers),

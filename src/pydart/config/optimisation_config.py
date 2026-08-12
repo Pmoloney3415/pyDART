@@ -161,9 +161,7 @@ def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
             "acceptable_rms_nonuniformity, and rms_power."
         )
     objective = ObjectiveConfig(
-        deposition_log_weight=float(
-            objective_data.get("deposition_log_weight", 2.0)
-        ),
+        deposition_log_weight=float(objective_data.get("deposition_log_weight", 2.0)),
         deposition_log_epsilon=float(
             objective_data.get("deposition_log_epsilon", 1.0e-8)
         ),

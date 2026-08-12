@@ -66,9 +66,7 @@ def plot_optimisation_history(history: Sequence[IterationRecord]):
     best_iteration = np.asarray([record.iteration for record in best_records]) + 1
     axes[0, 1].loglog(
         best_iteration,
-        _positive_for_log(
-            [record.symmetry_contribution for record in best_records]
-        ),
+        _positive_for_log([record.symmetry_contribution for record in best_records]),
         label="symmetry",
     )
     axes[0, 1].loglog(

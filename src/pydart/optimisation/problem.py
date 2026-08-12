@@ -258,8 +258,7 @@ class OptimisationProblem:
         mean_power_density = smoothed_deposited_power / total_area
         power_density = deposition.total / cell_areas
         variance = (
-            jnp.sum((power_density - mean_power_density) ** 2 * cell_areas)
-            / total_area
+            jnp.sum((power_density - mean_power_density) ** 2 * cell_areas) / total_area
         )
         rms_nonuniformity = jnp.sqrt(variance) / mean_power_density
         deposited_capacity_fraction = (

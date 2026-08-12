@@ -22,17 +22,13 @@ PARAMETER_PLOT_SCRIPT = (
     Path(__file__).parents[2] / "scripts" / "plot_optimisation_parameters.py"
 )
 RESTART_PARAMETER_PLOT_SCRIPT = (
-    Path(__file__).parents[2]
-    / "scripts"
-    / "plot_optimisation_restart_parameters.py"
+    Path(__file__).parents[2] / "scripts" / "plot_optimisation_restart_parameters.py"
 )
 BEST_RESULT_PLOT_SCRIPT = (
     Path(__file__).parents[2] / "scripts" / "plot_optimisation_best_result.py"
 )
 RESTART_RESULT_PLOT_SCRIPT = (
-    Path(__file__).parents[2]
-    / "scripts"
-    / "plot_optimisation_restart_results.py"
+    Path(__file__).parents[2] / "scripts" / "plot_optimisation_restart_results.py"
 )
 
 
@@ -44,9 +40,7 @@ def _small_six_beam_problem(
     device_iteration_chunk_size: int,
     checkpoint_interval: int,
 ) -> OptimisationProblem:
-    config = load_optimisation_config(
-        CONFIG_DIRECTORY / "six_beam_design_scipy.toml"
-    )
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
     simulation = replace(
         config.simulation,
         simulation=replace(config.simulation.simulation, plot_dpi=40),
@@ -171,14 +165,10 @@ def test_six_beam_smoke_optimisation_writes_recoverable_outputs(
                 check=True,
             )
         assert (
-            output
-            / "restart_parameter_plots"
-            / "restart_1_parameters.png"
+            output / "restart_parameter_plots" / "restart_1_parameters.png"
         ).is_file()
         assert (output / "optimisation_best_result.png").is_file()
-        assert (
-            output / "restart_result_plots" / "restart_1_result.png"
-        ).is_file()
+        assert (output / "restart_result_plots" / "restart_1_result.png").is_file()
 
     history, restarts, best, elapsed = load_optimisation_checkpoint(checkpoint_path)
     assert len(history) == len(result.history)

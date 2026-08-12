@@ -120,9 +120,7 @@ def test_hdf5_and_json_persistence_use_indexed_paths(tmp_path) -> None:
         assert handle.attrs["visibility_smoothing_epsilon"] == 0.05
         assert handle["deposition/total_cell_power"].shape == (128, 64)
         assert handle["deposition/per_beam_cell_power"].shape == (128, 64, 1)
-        assert handle[
-            "deposition/unsmoothed_deposited_power_per_beam"
-        ].shape == (1,)
+        assert handle["deposition/unsmoothed_deposited_power_per_beam"].shape == (1,)
         assert handle["harmonics/coefficients"].shape == (4, 7)
         assert np.iscomplexobj(handle["harmonics/coefficients"][:])
         assert handle["target/spherical_coordinates"].shape == (128, 64, 3)

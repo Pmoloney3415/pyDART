@@ -41,9 +41,7 @@ def load_optimisation_checkpoint(path: str | Path):
                 function_evaluations=int(history["function_evaluations"][index]),
                 elapsed_seconds=float(history["elapsed_seconds"][index]),
                 objective=float(history["objective"][index]),
-                symmetry_contribution=float(
-                    history["symmetry_contribution"][index]
-                ),
+                symmetry_contribution=float(history["symmetry_contribution"][index]),
                 rms_ratio_power=float(history["rms_ratio_power"][index]),
                 deposition_contribution=float(
                     history["deposition_contribution"][index]
