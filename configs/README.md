@@ -34,6 +34,13 @@ deck dispatches up to 1000 accepted iterations per device chunk and writes
 checkpoints/history plots only every 5000 iterations (plus the initial and
 final outputs).
 
+The `four`, `twelve`, `sixteen`, and `twenty` beam simulation decks are
+structured geometry benchmarks. Their matching `*_beam_geometry_scipy.toml`
+decks optimize all beam parameters while forcing circular spots, and include
+the structured base layout as the first of eight restarts. The 4, 12,
+and 20 beam layouts use Platonic-solid vertices; the 16 beam layout is the
+Hardin-Sloane 16-point spherical 5-design.
+
 For JAXopt, `device_iteration_chunk_size` controls the maximum number of
 accepted iterations compiled and dispatched together before diagnostics return
 to the host. It defaults to `10`; checkpoint and plot boundaries can shorten a
