@@ -66,7 +66,14 @@ def save_deposition_result(
             result.per_beam,
             units="W",
         )
+        _create_dataset(
+            deposition,
+            "unsmoothed_deposited_power_per_beam",
+            result.unsmoothed_deposited_power_per_beam,
+            units="W",
+        )
         deposition.attrs["axis_order"] = "azimuthal, polar, beam"
+        deposition.attrs["cell_power_visibility"] = "smoothed"
 
         target = _replace_group(handle, "target")
         _create_dataset(
@@ -220,6 +227,12 @@ def _summary_values(metrics: MetricsResult) -> dict[str, float]:
         "deposited_power_W": float(_as_numpy(metrics.deposited_power)),
         "incident_power_W": float(_as_numpy(metrics.incident_power)),
         "deposited_fraction": float(_as_numpy(metrics.deposited_fraction)),
+        "smoothed_deposited_power_W": float(
+            _as_numpy(metrics.smoothed_deposited_power)
+        ),
+        "smoothed_deposited_fraction": float(
+            _as_numpy(metrics.smoothed_deposited_fraction)
+        ),
         "mean_power_density_W_m2": float(_as_numpy(metrics.mean_power_density)),
         "rms_nonuniformity": float(_as_numpy(metrics.rms_nonuniformity)),
     }

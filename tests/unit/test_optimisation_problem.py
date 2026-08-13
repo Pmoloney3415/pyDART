@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
@@ -9,12 +10,38 @@ import numpy as np
 
 from pydart.config.optimisation_config import load_optimisation_config
 from pydart.optimisation import OptimisationProblem
+from pydart.optimisation.problem import _bounded_surface_offsets
 
 CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
 
 
 def _six_beam_problem(*, coarse: bool = False) -> OptimisationProblem:
-    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
+    variables = replace(
+        config.variables,
+        power=replace(config.variables.power, enabled=True),
+        origin=replace(
+            config.variables.origin,
+            enabled=True,
+            constraint="unconstrained",
+        ),
+        pointing=replace(
+            config.variables.pointing,
+            enabled=True,
+            constraint="bounded",
+            maximum_angular_displacement_degrees=80.0,
+        ),
+        spot=replace(
+            config.variables.spot,
+            width_enabled=True,
+            force_circular=False,
+            share_width_across_beams=False,
+            rotation_enabled=True,
+            supergaussian_index_enabled=True,
+            share_supergaussian_index_across_beams=False,
+        ),
+    )
+    config = replace(config, variables=variables)
     if coarse:
         simulation = replace(
             config.simulation,
@@ -96,6 +123,57 @@ def test_bounds_decode_to_physical_scalar_bounds() -> None:
     )
 
 
+def test_shared_circular_spot_uses_two_variables_for_all_beams() -> None:
+    config = load_optimisation_config(
+        CONFIG_DIRECTORY / "twelve_beam_geometry_scipy.toml"
+    )
+    variables = replace(
+        config.variables,
+        power=replace(config.variables.power, enabled=True),
+        origin=replace(
+            config.variables.origin,
+            enabled=True,
+            constraint="unconstrained",
+        ),
+        pointing=replace(
+            config.variables.pointing,
+            enabled=True,
+            constraint="unconstrained",
+        ),
+        spot=replace(
+            config.variables.spot,
+            width_enabled=True,
+            force_circular=True,
+            share_width_across_beams=True,
+            rotation_enabled=False,
+            supergaussian_index_enabled=True,
+            share_supergaussian_index_across_beams=True,
+        ),
+    )
+    config = replace(config, variables=variables)
+    problem = OptimisationProblem(config)
+    beam_count = config.simulation.laser.n_beams
+    blocks = {block.name: block for block in problem.parameter_blocks}
+
+    assert problem.n_parameters == 7 * beam_count + 2
+    assert blocks["spot_width"].shared_across_beams
+    assert blocks["supergaussian_index"].shared_across_beams
+    assert "shared_spot.width" in problem.parameter_names
+    assert "shared_spot.index" in problem.parameter_names
+
+    low = problem.beam_parameters(problem.lower_bounds)
+    high = problem.beam_parameters(problem.upper_bounds)
+    spot = config.variables.spot
+    np.testing.assert_allclose(low.spot_widths, spot.minimum_width_x)
+    np.testing.assert_allclose(high.spot_widths, spot.maximum_width_x)
+    np.testing.assert_allclose(
+        low.supergaussian_indices, spot.minimum_supergaussian_index
+    )
+    np.testing.assert_allclose(
+        high.supergaussian_indices, spot.maximum_supergaussian_index
+    )
+
+
 def test_origin_motion_transports_unadjusted_pointing() -> None:
     problem = _six_beam_problem()
     design = problem.initial_parameters
@@ -117,8 +195,45 @@ def test_origin_motion_transports_unadjusted_pointing() -> None:
     np.testing.assert_allclose(pointing_direction, moved_direction, atol=1e-6)
 
 
+def test_bounded_pointing_uses_smooth_square_to_disk_map() -> None:
+    maximum_angle = jnp.deg2rad(45.0)
+    reference = jnp.asarray([[1.0, 0.0, 0.0]])
+
+    def angular_offset(values: Sequence[float]) -> float:
+        direction = _bounded_surface_offsets(
+            reference, jnp.asarray([values]), maximum_angle
+        )[0]
+        return float(jnp.arccos(jnp.clip(jnp.dot(reference[0], direction), -1.0, 1.0)))
+
+    center = angular_offset([0.5, 0.5])
+    edge = angular_offset([1.0, 0.5])
+    corner = angular_offset([1.0, 1.0])
+    formerly_clipped_interior = angular_offset([0.9, 0.9])
+
+    np.testing.assert_allclose(center, 0.0, atol=1e-7)
+    np.testing.assert_allclose(edge, maximum_angle, atol=1e-6)
+    np.testing.assert_allclose(corner, maximum_angle, atol=1e-6)
+    assert center < formerly_clipped_interior < corner
+
+
+def test_bounded_pointing_retains_radial_gradient_outside_unit_circle() -> None:
+    maximum_angle = jnp.deg2rad(45.0)
+    reference = jnp.asarray([[1.0, 0.0, 0.0]])
+    values = jnp.asarray([0.9, 0.9])
+
+    jacobian = jax.jacrev(
+        lambda point: _bounded_surface_offsets(
+            reference, point[None, :], maximum_angle
+        )[0]
+    )(values)
+    radial_change = jacobian @ jnp.asarray([1.0, 1.0])
+
+    assert bool(jnp.all(jnp.isfinite(jacobian)))
+    assert float(jnp.linalg.norm(radial_change)) > 1.0e-3
+
+
 def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
-    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    config = _six_beam_problem().config
     unfrozen_problem = OptimisationProblem(config)
     variables = replace(config.variables, frozen_beams=("beam_1",))
     problem = OptimisationProblem(replace(config, variables=variables))
@@ -140,6 +255,7 @@ def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
 
 def test_objective_components_sum_to_finite_value_with_gradient() -> None:
     problem = _six_beam_problem(coarse=True)
+    metrics = problem.metrics(problem.initial_parameters)
 
     (value, terms), gradient = jax.value_and_grad(
         problem.objective_with_aux, has_aux=True
@@ -147,11 +263,48 @@ def test_objective_components_sum_to_finite_value_with_gradient() -> None:
 
     np.testing.assert_allclose(
         value,
-        terms.rms_contribution
-        + terms.mode_contribution
-        + terms.deposition_contribution,
+        terms.symmetry_contribution + terms.deposition_contribution,
+    )
+    expected_rms_ratio_power = (
+        terms.rms_nonuniformity / problem.config.objective.acceptable_rms_nonuniformity
+    ) ** problem.config.objective.rms_power
+    np.testing.assert_allclose(terms.rms_ratio_power, expected_rms_ratio_power)
+    np.testing.assert_allclose(
+        terms.symmetry_contribution,
+        jnp.log1p(expected_rms_ratio_power),
+    )
+    safe_deposition = (
+        terms.deposited_capacity_fraction
+        + problem.config.objective.deposition_log_epsilon
+    )
+    np.testing.assert_allclose(
+        terms.deposition_contribution,
+        -problem.config.objective.deposition_log_weight * jnp.log(safe_deposition),
+    )
+    np.testing.assert_allclose(terms.rms_nonuniformity, metrics.rms_nonuniformity)
+    np.testing.assert_allclose(
+        terms.deposited_capacity_fraction,
+        metrics.deposited_power / problem.base_simulation.beams.facility_power,
     )
     assert bool(jnp.isfinite(value))
     assert gradient.shape == (problem.n_parameters,)
     assert bool(jnp.all(jnp.isfinite(gradient)))
     assert float(jnp.linalg.norm(gradient)) > 0.0
+
+
+def test_high_harmonic_resolution_is_excluded_from_objective_jit() -> None:
+    problem = _six_beam_problem(coarse=True)
+    simulation = replace(
+        problem.config.simulation,
+        metrics=replace(problem.config.simulation.metrics, l_max=20),
+    )
+    problem = OptimisationProblem(replace(problem.config, simulation=simulation))
+    compiled_value_and_gradient = jax.jit(
+        jax.value_and_grad(problem.objective_with_aux, has_aux=True)
+    )
+
+    (value, terms), gradient = compiled_value_and_gradient(problem.initial_parameters)
+
+    assert bool(jnp.isfinite(value))
+    assert bool(jnp.all(jnp.isfinite(gradient)))
+    assert terms.rms_nonuniformity.shape == ()

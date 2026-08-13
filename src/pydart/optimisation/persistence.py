@@ -41,8 +41,8 @@ def load_optimisation_checkpoint(path: str | Path):
                 function_evaluations=int(history["function_evaluations"][index]),
                 elapsed_seconds=float(history["elapsed_seconds"][index]),
                 objective=float(history["objective"][index]),
-                rms_contribution=float(history["rms_contribution"][index]),
-                mode_contribution=float(history["mode_contribution"][index]),
+                symmetry_contribution=float(history["symmetry_contribution"][index]),
+                rms_ratio_power=float(history["rms_ratio_power"][index]),
                 deposition_contribution=float(
                     history["deposition_contribution"][index]
                 ),
@@ -55,9 +55,6 @@ def load_optimisation_checkpoint(path: str | Path):
                     history["projected_gradient_norm"][index]
                 ),
                 design=np.asarray(history["design"][index]),
-                normalized_power_by_l=np.asarray(
-                    history["normalized_power_by_l"][index]
-                ),
             )
             for index in range(count)
         )
@@ -111,6 +108,7 @@ def save_optimisation_checkpoint(
     with h5py.File(temporary_path, "w") as handle:
         handle.attrs["format"] = "pyDART optimization checkpoint"
         handle.attrs["optimisation_index"] = problem.config.run.index
+        handle.attrs["solver"] = problem.config.run.solver
         handle.attrs["elapsed_seconds"] = elapsed_seconds
         handle.attrs["resume_semantics"] = (
             "Restart L-BFGS-B from saved best design; internal Hessian history "
@@ -138,8 +136,8 @@ def save_optimisation_checkpoint(
             "function_evaluations",
             "elapsed_seconds",
             "objective",
-            "rms_contribution",
-            "mode_contribution",
+            "symmetry_contribution",
+            "rms_ratio_power",
             "deposition_contribution",
             "rms_nonuniformity",
             "deposited_capacity_fraction",
@@ -157,13 +155,6 @@ def save_optimisation_checkpoint(
             compression="gzip",
             shuffle=True,
         )
-        history_group.create_dataset(
-            "normalized_power_by_l",
-            data=np.stack([record.normalized_power_by_l for record in records]),
-            compression="gzip",
-            shuffle=True,
-        )
-
         _write_design_state(handle.create_group("current"), problem, records[-1])
         _write_design_state(handle.create_group("global_best"), problem, best_record)
         restarts = handle.create_group("restarts")
@@ -176,6 +167,7 @@ def save_optimisation_checkpoint(
             group.attrs["function_evaluations"] = result.function_evaluations
             group.attrs["best_objective"] = result.best_objective
             group.create_dataset("best_design", data=result.best_design)
+            _write_parameter_state(group, problem, result.best_design)
 
     temporary_path.replace(path)
     return path
@@ -192,6 +184,7 @@ def save_optimisation_summary(result: OptimisationResult) -> Path:
     best = result.best_record
     data = {
         "optimisation_index": result.problem.config.run.index,
+        "solver": result.problem.config.run.solver,
         "success": result.success,
         "message": result.message,
         "elapsed_seconds": result.elapsed_seconds,
@@ -289,11 +282,15 @@ def save_simulation_snapshot(
 
 
 def _write_design_state(group, problem, record) -> None:
-    parameters = problem.beam_parameters(record.design)
     group.attrs["objective"] = record.objective
     group.attrs["restart_index"] = record.restart_index
     group.attrs["iteration"] = record.iteration
     group.create_dataset("design", data=record.design)
+    _write_parameter_state(group, problem, record.design)
+
+
+def _write_parameter_state(group, problem, design) -> None:
+    parameters = problem.beam_parameters(design)
     group.create_dataset(
         "physical_origins", data=np.asarray(jax.device_get(parameters.physical_origins))
     )

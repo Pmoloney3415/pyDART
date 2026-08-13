@@ -3,20 +3,19 @@ from pathlib import Path
 
 import pytest
 
-import pydart.config.optimisation_config as optimisation_config_module
-from pydart.config.optimisation_config import (
-    decreasing_mode_weights,
-    load_optimisation_config,
-)
+from pydart.config.optimisation_config import load_optimisation_config
 from pydart.config.optimisation_validation import validate_optimisation_config
-from pydart.config.simulation_config import load_config
 
 CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
-SIMULATION_DIRECTORY = Path(__file__).parents[2] / "configs" / "simulations"
 
 
 @pytest.mark.parametrize(
-    "filename", ["OMEGA60_optimisation.toml", "six_beam_design.toml"]
+    "filename",
+    [
+        "OMEGA60_optimisation.toml",
+        "generic_60_beam_design.toml",
+        "six_beam_design_scipy.toml",
+    ],
 )
 def test_bundled_optimisation_configs_load(filename: str) -> None:
     config = load_optimisation_config(CONFIG_DIRECTORY / filename)
@@ -25,72 +24,62 @@ def test_bundled_optimisation_configs_load(filename: str) -> None:
     assert set(config.variables.frozen_beams) <= beam_names
     assert config.run.simulation_config.is_file()
     assert config.restarts.number > 0
-    assert config.objective.mode_weights
-    assert all(
-        0 <= degree <= config.simulation.metrics.l_max
-        for degree, _ in config.objective.mode_weights
-    )
+    assert config.run.solver == "scipy_lbfgsb"
+    assert config.run.device_iteration_chunk_size == 10
+    assert config.objective.deposition_log_weight > 0.0
+    assert config.objective.deposition_log_epsilon == 1.0e-8
+    assert config.objective.acceptable_rms_nonuniformity == 0.01
+    assert config.objective.rms_power == 2.0
 
 
-def test_decreasing_mode_weights_use_configured_scale_and_power() -> None:
-    weights = decreasing_mode_weights(4, l1_mode_weight=2.0, mode_decrease_power=1.0)
+@pytest.mark.parametrize(
+    ("filename", "solver", "index", "chunk_size", "output_interval"),
+    [
+        (
+            "generic_48_beam_design.toml",
+            "jaxopt_lbfgsb",
+            48,
+            1000,
+            5000,
+        ),
+        (
+            "generic_48_beam_design_cpu.toml",
+            "scipy_lbfgsb",
+            148,
+            10,
+            500,
+        ),
+    ],
+)
+def test_48_beam_optimisation_configs(
+    filename: str,
+    solver: str,
+    index: int,
+    chunk_size: int,
+    output_interval: int,
+) -> None:
+    config = load_optimisation_config(CONFIG_DIRECTORY / filename)
 
-    assert weights == ((1, 2.0), (2, 1.0), (3, 2.0 / 3.0), (4, 0.5))
-
-
-def test_explicit_mode_weights_are_parsed_verbatim(tmp_path: Path, monkeypatch) -> None:
-    simulation = load_config(SIMULATION_DIRECTORY / "six_beam_500um.toml")
-    data = {
-        "optimisation": {
-            "index": 1,
-            "simulation_config": "simulation.toml",
-            "output_directory": "results",
-            "maximum_iterations": 10,
-        },
-        "variables": {
-            "frozen_beams": [],
-            "power": {
-                "enabled": True,
-                "minimum_fraction_of_maximum": 0.0,
-                "maximum_fraction_of_maximum": 1.0,
-            },
-            "origin": {"enabled": False, "constraint": "unconstrained"},
-            "pointing": {"enabled": False, "constraint": "unconstrained"},
-            "spot": {
-                "width_enabled": False,
-                "force_circular": False,
-                "minimum_width_x": 1.0e-4,
-                "maximum_width_x": 2.0e-4,
-                "minimum_width_y": 1.0e-4,
-                "maximum_width_y": 2.0e-4,
-                "rotation_enabled": False,
-                "minimum_rotation_degrees": 0.0,
-                "maximum_rotation_degrees": 180.0,
-                "supergaussian_index_enabled": False,
-                "minimum_supergaussian_index": 1.0,
-                "maximum_supergaussian_index": 2.0,
-            },
-        },
-        "objective": {
-            "mode_weight_option": "explicit",
-            "mode_weights": {"2": 0.75, "4": 0.125},
-        },
-    }
-    path = tmp_path / "optimisation.toml"
-    path.touch()
-    monkeypatch.setattr(optimisation_config_module.tomllib, "load", lambda stream: data)
-    monkeypatch.setattr(
-        optimisation_config_module, "load_config", lambda path: simulation
-    )
-
-    config = load_optimisation_config(path)
-
-    assert config.objective.mode_weights == ((2, 0.75), (4, 0.125))
+    assert config.run.solver == solver
+    assert config.run.index == index
+    assert config.run.device_iteration_chunk_size == chunk_size
+    assert config.run.checkpoint_interval == output_interval
+    assert config.run.history_plot_interval == output_interval
+    assert config.simulation.laser.n_beams == 48
 
 
-@pytest.mark.parametrize("case", ["unknown_beam", "reversed_power", "disabled"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "unknown_beam",
+        "reversed_power",
+        "disabled",
+        "unknown_solver",
+        "invalid_chunk_size",
+    ],
+)
 def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
-    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design.toml")
+    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
     if case == "unknown_beam":
         config = replace(
             config,
@@ -108,7 +97,7 @@ def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
                 ),
             ),
         )
-    else:
+    elif case == "disabled":
         config = replace(
             config,
             variables=replace(
@@ -124,6 +113,42 @@ def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
                 ),
             ),
         )
+    elif case == "unknown_solver":
+        config = replace(config, run=replace(config.run, solver="not_a_solver"))
+    else:
+        config = replace(
+            config,
+            run=replace(config.run, device_iteration_chunk_size=0),
+        )
 
     with pytest.raises(ValueError):
         validate_optimisation_config(config)
+
+
+def test_shared_spot_rejects_inconsistent_base_beams() -> None:
+    config = load_optimisation_config(
+        CONFIG_DIRECTORY / "four_beam_geometry_scipy.toml"
+    )
+    spot = replace(
+        config.variables.spot,
+        width_enabled=True,
+        force_circular=True,
+        share_width_across_beams=True,
+        rotation_enabled=False,
+    )
+    config = replace(
+        config,
+        variables=replace(config.variables, spot=spot),
+    )
+    first = config.simulation.beams[0]
+    inconsistent = replace(
+        first,
+        spot=replace(first.spot, width_x=first.spot.width_x * 1.1),
+    )
+    simulation = replace(
+        config.simulation,
+        beams=(inconsistent, *config.simulation.beams[1:]),
+    )
+
+    with pytest.raises(ValueError, match="circular base beams"):
+        validate_optimisation_config(replace(config, simulation=simulation))

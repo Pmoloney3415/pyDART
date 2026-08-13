@@ -122,8 +122,23 @@ def test_deposition_has_expected_shapes_and_is_jittable() -> None:
 
     assert result.per_beam.shape == (128, 64, 1)
     assert result.total.shape == (128, 64)
+    assert result.unsmoothed_deposited_power_per_beam.shape == (1,)
     np.testing.assert_allclose(result.total, result.per_beam[..., 0])
     assert bool(jnp.all(result.total >= 0.0))
+
+
+def test_unsmoothed_power_excludes_smooth_visibility_tail() -> None:
+    simulation = initialise_simulation(_single_beam_config())
+
+    result = calculate_deposition(
+        simulation.target,
+        simulation.beams,
+        visibility_smoothing_epsilon=0.05,
+    )
+
+    smoothed_power = jnp.sum(result.total)
+    unsmoothed_power = jnp.sum(result.unsmoothed_deposited_power_per_beam)
+    assert bool(unsmoothed_power < smoothed_power)
 
 
 def test_total_deposition_is_sum_of_per_beam_contributions() -> None:
@@ -143,6 +158,7 @@ def test_total_deposition_is_sum_of_per_beam_contributions() -> None:
     result = initialise_simulation(config).run()
 
     assert result.per_beam.shape[-1] == 2
+    assert result.unsmoothed_deposited_power_per_beam.shape == (2,)
     np.testing.assert_allclose(result.total, jnp.sum(result.per_beam, axis=-1))
 
 

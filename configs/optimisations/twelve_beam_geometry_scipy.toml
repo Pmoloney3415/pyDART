@@ -1,7 +1,7 @@
 [optimisation]
-index = 1
+index = 12
 solver = "scipy_lbfgsb"
-simulation_config = "../simulations/OMEGA60_500um.toml"
+simulation_config = "../simulations/twelve_beam_500um.toml"
 output_directory = "../../results/optimisations"
 maximum_iterations = 5000
 device_iteration_chunk_size = 10
@@ -21,8 +21,6 @@ include_base_design = false
 random_seed = 20260812
 
 [variables]
-# Put beam names here to hold all their variables fixed, for example
-# frozen_beams = ["beam_17", "beam_22"]
 frozen_beams = []
 
 # All supported beam parameters are free, with spot ellipticity and rotation
@@ -38,8 +36,8 @@ constraint = "unconstrained"
 
 [variables.pointing]
 enabled = false
-constraint = "bounded"
-maximum_angular_displacement_degrees = 15.0
+constraint = "unconstrained"
+maximum_angular_displacement_degrees = 50.0
 
 [variables.spot]
 width_enabled = true
@@ -58,7 +56,7 @@ minimum_supergaussian_index = 2.0
 maximum_supergaussian_index = 8.0
 
 [objective]
-deposition_log_weight = 20.0
+deposition_log_weight = 10.0
 deposition_log_epsilon = 1.0e-8
 acceptable_rms_nonuniformity = 0.01
 rms_power = 2.0

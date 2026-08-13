@@ -22,6 +22,7 @@ class ParameterBlock:
     stop: int
     beam_indices: tuple[int, ...]
     components_per_beam: int
+    shared_across_beams: bool = False
 
 
 @jax.tree_util.register_pytree_node_class
@@ -29,21 +30,19 @@ class ParameterBlock:
 class ObjectiveTerms:
     """JAX-compatible objective components and physical diagnostics."""
 
-    rms_contribution: Array
-    mode_contribution: Array
+    symmetry_contribution: Array
+    rms_ratio_power: Array
     deposition_contribution: Array
     rms_nonuniformity: Array
     deposited_capacity_fraction: Array
-    normalized_power_by_l: Array
 
     def tree_flatten(self):
         return (
-            self.rms_contribution,
-            self.mode_contribution,
+            self.symmetry_contribution,
+            self.rms_ratio_power,
             self.deposition_contribution,
             self.rms_nonuniformity,
             self.deposited_capacity_fraction,
-            self.normalized_power_by_l,
         ), None
 
     @classmethod
@@ -119,6 +118,9 @@ class OptimisationProblem:
         beam_names = self.base_simulation.beams.names
         for block in self._blocks:
             components = component_names[block.name]
+            if block.shared_across_beams:
+                names.extend(f"shared_spot.{component}" for component in components)
+                continue
             for beam_index in block.beam_indices:
                 names.extend(
                     f"{beam_names[beam_index]}.{component}" for component in components
@@ -204,6 +206,10 @@ class OptimisationProblem:
                     values[:, 1], spot.minimum_width_y, spot.maximum_width_y
                 )
                 selected_widths = jnp.stack((width_x, width_y), axis=-1)
+            if block.shared_across_beams:
+                selected_widths = jnp.broadcast_to(
+                    selected_widths, (len(self._active_indices), 2)
+                )
             widths = widths.at[active].set(selected_widths)
         block = self._find_block("rotation")
         if block is not None:
@@ -222,13 +228,16 @@ class OptimisationProblem:
         if block is not None:
             values = self._block_values(design, block)[:, 0]
             spot = variables.spot
-            indices_sg = indices_sg.at[active].set(
-                _linear(
-                    values,
-                    spot.minimum_supergaussian_index,
-                    spot.maximum_supergaussian_index,
-                )
+            selected_indices = _linear(
+                values,
+                spot.minimum_supergaussian_index,
+                spot.maximum_supergaussian_index,
             )
+            if block.shared_across_beams:
+                selected_indices = jnp.broadcast_to(
+                    selected_indices, (len(self._active_indices),)
+                )
+            indices_sg = indices_sg.at[active].set(selected_indices)
 
         return BeamParameters(
             physical_origins=origins,
@@ -252,29 +261,39 @@ class OptimisationProblem:
         return self.objective_with_aux(design)[0]
 
     def objective_with_aux(self, design: Array) -> tuple[Array, ObjectiveTerms]:
-        """Return scalar loss together with components used for monitoring."""
-        metrics = self.metrics(design)
-        objective = self.config.objective
-        rms_contribution = objective.rms_weight * metrics.rms_nonuniformity
-        mode_contribution = jnp.asarray(0.0, dtype=rms_contribution.dtype)
-        for degree, weight in objective.mode_weights:
-            mode_contribution = (
-                mode_contribution + weight * metrics.normalized_power_by_l[degree]
-            )
+        r"""Return ``-w log(D) + log(1 + (R/R0)**p)`` and diagnostics."""
+        deposition = self.simulation(design).run()
+        cell_areas = deposition.target.cell_areas
+        total_area = jnp.sum(cell_areas)
+        smoothed_deposited_power = jnp.sum(deposition.total)
+        mean_power_density = smoothed_deposited_power / total_area
+        power_density = deposition.total / cell_areas
+        variance = (
+            jnp.sum((power_density - mean_power_density) ** 2 * cell_areas) / total_area
+        )
+        rms_nonuniformity = jnp.sqrt(variance) / mean_power_density
         deposited_capacity_fraction = (
-            metrics.deposited_power / self.base_simulation.beams.facility_power
+            jnp.sum(deposition.unsmoothed_deposited_power_per_beam)
+            / self.base_simulation.beams.facility_power
         )
-        deposition_contribution = objective.deposited_power_weight * (
-            1.0 - deposited_capacity_fraction
+        objective = self.config.objective
+        rms_ratio_power = (
+            rms_nonuniformity / objective.acceptable_rms_nonuniformity
+        ) ** objective.rms_power
+        symmetry_contribution = jnp.log1p(rms_ratio_power)
+        safe_deposited_fraction = (
+            deposited_capacity_fraction + objective.deposition_log_epsilon
         )
-        loss = rms_contribution + mode_contribution + deposition_contribution
+        deposition_contribution = -objective.deposition_log_weight * jnp.log(
+            safe_deposited_fraction
+        )
+        loss = symmetry_contribution + deposition_contribution
         return loss, ObjectiveTerms(
-            rms_contribution=rms_contribution,
-            mode_contribution=mode_contribution,
+            symmetry_contribution=symmetry_contribution,
+            rms_ratio_power=rms_ratio_power,
             deposition_contribution=deposition_contribution,
-            rms_nonuniformity=metrics.rms_nonuniformity,
+            rms_nonuniformity=rms_nonuniformity,
             deposited_capacity_fraction=deposited_capacity_fraction,
-            normalized_power_by_l=metrics.normalized_power_by_l,
         )
 
     def value_and_gradient(self, design: Array) -> tuple[Array, Array]:
@@ -290,16 +309,15 @@ class OptimisationProblem:
 
     @staticmethod
     def _block_values(design: Array, block: ParameterBlock) -> Array:
-        return design[block.start : block.stop].reshape(
-            len(block.beam_indices), block.components_per_beam
-        )
+        rows = 1 if block.shared_across_beams else len(block.beam_indices)
+        return design[block.start : block.stop].reshape(rows, block.components_per_beam)
 
     def _build_layout(self) -> tuple[tuple[ParameterBlock, ...], list[float]]:
         blocks: list[ParameterBlock] = []
         initial: list[float] = []
         active = self._active_indices
 
-        def add(name: str, values: Array) -> None:
+        def add(name: str, values: Array, *, shared_across_beams: bool = False) -> None:
             flat = jnp.asarray(values).reshape(-1).tolist()
             start = len(initial)
             initial.extend(float(value) for value in flat)
@@ -309,7 +327,8 @@ class OptimisationProblem:
                     start,
                     len(initial),
                     active,
-                    len(flat) // len(active),
+                    len(flat) if shared_across_beams else len(flat) // len(active),
+                    shared_across_beams,
                 )
             )
 
@@ -345,12 +364,26 @@ class OptimisationProblem:
                 widths[:, 0], spot.minimum_width_x, spot.maximum_width_x
             )
             if spot.force_circular:
-                add("spot_width", x[:, None])
+                values = x[:, None]
+                if spot.share_width_across_beams:
+                    values = values[:1]
+                add(
+                    "spot_width",
+                    values,
+                    shared_across_beams=spot.share_width_across_beams,
+                )
             else:
                 y = _inverse_linear(
                     widths[:, 1], spot.minimum_width_y, spot.maximum_width_y
                 )
-                add("spot_width_xy", jnp.stack((x, y), axis=-1))
+                values = jnp.stack((x, y), axis=-1)
+                if spot.share_width_across_beams:
+                    values = values[:1]
+                add(
+                    "spot_width_xy",
+                    values,
+                    shared_across_beams=spot.share_width_across_beams,
+                )
         if spot.rotation_enabled:
             degrees = jnp.rad2deg(self._baseline.spot_rotations[active_array])
             add(
@@ -362,13 +395,17 @@ class OptimisationProblem:
                 )[:, None],
             )
         if spot.supergaussian_index_enabled:
+            values = _inverse_linear(
+                self._baseline.supergaussian_indices[active_array],
+                spot.minimum_supergaussian_index,
+                spot.maximum_supergaussian_index,
+            )[:, None]
+            if spot.share_supergaussian_index_across_beams:
+                values = values[:1]
             add(
                 "supergaussian_index",
-                _inverse_linear(
-                    self._baseline.supergaussian_indices[active_array],
-                    spot.minimum_supergaussian_index,
-                    spot.maximum_supergaussian_index,
-                )[:, None],
+                values,
+                shared_across_beams=(spot.share_supergaussian_index_across_beams),
             )
         return tuple(blocks), initial
 
@@ -404,10 +441,17 @@ def _bounded_surface_offsets(
     reference: Array, values: Array, maximum_angle: Array
 ) -> Array:
     first, second = _surface_basis(reference)
-    tangent_components = (2.0 * values - 1.0) * maximum_angle
-    norm = jnp.sqrt(jnp.sum(tangent_components**2, axis=-1) + 1.0e-30)
-    scale = jnp.minimum(1.0, maximum_angle / norm)
-    tangent_components = tangent_components * scale[:, None]
+    square = 2.0 * values - 1.0
+    x = square[:, 0]
+    y = square[:, 1]
+    disk = jnp.stack(
+        (
+            x * jnp.sqrt(1.0 - 0.5 * y**2),
+            y * jnp.sqrt(1.0 - 0.5 * x**2),
+        ),
+        axis=-1,
+    )
+    tangent_components = disk * maximum_angle
     angle = jnp.sqrt(jnp.sum(tangent_components**2, axis=-1) + 1.0e-30)
     tangent = tangent_components[:, 0:1] * first + tangent_components[:, 1:2] * second
     return (

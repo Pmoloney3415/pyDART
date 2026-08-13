@@ -12,9 +12,11 @@ from pydart.config.simulation_config import PyDARTConfig, load_config
 @dataclass(frozen=True)
 class OptimisationRunConfig:
     index: int
+    solver: str
     simulation_config: Path
     output_directory: Path
     maximum_iterations: int
+    device_iteration_chunk_size: int
     objective_relative_tolerance: float
     projected_gradient_tolerance: float
     maximum_wall_time_seconds: float
@@ -50,6 +52,7 @@ class SurfaceVariableConfig:
 class SpotVariableConfig:
     width_enabled: bool
     force_circular: bool
+    share_width_across_beams: bool
     minimum_width_x: float
     maximum_width_x: float
     minimum_width_y: float
@@ -58,6 +61,7 @@ class SpotVariableConfig:
     minimum_rotation_degrees: float
     maximum_rotation_degrees: float
     supergaussian_index_enabled: bool
+    share_supergaussian_index_across_beams: bool
     minimum_supergaussian_index: float
     maximum_supergaussian_index: float
 
@@ -73,12 +77,10 @@ class VariableConfig:
 
 @dataclass(frozen=True)
 class ObjectiveConfig:
-    rms_weight: float
-    deposited_power_weight: float
-    mode_weight_option: str
-    l1_mode_weight: float | None
-    mode_decrease_power: float | None
-    mode_weights: tuple[tuple[int, float], ...]
+    deposition_log_weight: float
+    deposition_log_epsilon: float
+    acceptable_rms_nonuniformity: float
+    rms_power: float
 
 
 @dataclass(frozen=True)
@@ -89,21 +91,6 @@ class OptimisationConfig:
     simulation: PyDARTConfig
     restarts: RestartConfig
     source_path: Path
-
-
-def decreasing_mode_weights(
-    l_max: int,
-    l1_mode_weight: float,
-    mode_decrease_power: float,
-) -> tuple[tuple[int, float], ...]:
-    """Return weights ``w_l = w_1 / l**p`` through the simulation ``l_max``."""
-    return tuple(
-        (
-            degree,
-            l1_mode_weight / degree**mode_decrease_power,
-        )
-        for degree in range(1, l_max + 1)
-    )
 
 
 def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
@@ -117,9 +104,13 @@ def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
     simulation = load_config(simulation_path)
     run = OptimisationRunConfig(
         index=int(run_data["index"]),
+        solver=str(run_data.get("solver", "scipy_lbfgsb")),
         simulation_config=simulation_path,
         output_directory=(base_directory / run_data["output_directory"]).resolve(),
         maximum_iterations=int(run_data["maximum_iterations"]),
+        device_iteration_chunk_size=int(
+            run_data.get("device_iteration_chunk_size", 10)
+        ),
         objective_relative_tolerance=float(
             run_data.get("objective_relative_tolerance", 1.0e-9)
         ),
@@ -152,48 +143,34 @@ def load_optimisation_config(filename: str | Path) -> OptimisationConfig:
         spot=_read_spot_variables(variable_data["spot"]),
     )
     objective_data = data.get("objective", {})
-    mode_weight_option = str(
-        objective_data.get(
-            "mode_weight_option",
-            "explicit" if "mode_weights" in objective_data else "decreasing",
+    obsolete_keys = {
+        "deposited_power_weight",
+        "deposition_exponential_weight",
+        "symmetry_log_epsilon",
+        "deposition_shortfall_weight",
+        "deposition_huber_width",
+        "objective_log_epsilon",
+        "rms_weight",
+        "mode_weight_option",
+        "mode_weights",
+        "l1_mode_weight",
+        "mode_decrease_power",
+    } & objective_data.keys()
+    if obsolete_keys:
+        raise ValueError(
+            f"Obsolete objective options {sorted(obsolete_keys)} have been replaced "
+            "by deposition_log_weight, deposition_log_epsilon, "
+            "acceptable_rms_nonuniformity, and rms_power."
         )
-    )
-    l1_mode_weight = None
-    mode_decrease_power = None
-    if mode_weight_option == "explicit":
-        if "mode_weights" not in objective_data:
-            raise ValueError(
-                "Explicit mode weighting requires [objective.mode_weights]."
-            )
-        mode_weights = tuple(
-            sorted(
-                (int(degree), float(weight))
-                for degree, weight in objective_data["mode_weights"].items()
-            )
-        )
-    elif mode_weight_option == "decreasing":
-        if "mode_weights" in objective_data:
-            raise ValueError(
-                "Do not provide explicit mode_weights with decreasing weighting."
-            )
-        l1_mode_weight = float(objective_data.get("l1_mode_weight", 1.0))
-        mode_decrease_power = float(objective_data.get("mode_decrease_power", 2.0))
-        mode_weights = decreasing_mode_weights(
-            simulation.metrics.l_max,
-            l1_mode_weight,
-            mode_decrease_power,
-        )
-    else:
-        raise ValueError("mode_weight_option must be 'explicit' or 'decreasing'.")
     objective = ObjectiveConfig(
-        rms_weight=float(objective_data.get("rms_weight", 1.0)),
-        deposited_power_weight=float(
-            objective_data.get("deposited_power_weight", 0.25)
+        deposition_log_weight=float(objective_data.get("deposition_log_weight", 2.0)),
+        deposition_log_epsilon=float(
+            objective_data.get("deposition_log_epsilon", 1.0e-8)
         ),
-        mode_weight_option=mode_weight_option,
-        l1_mode_weight=l1_mode_weight,
-        mode_decrease_power=mode_decrease_power,
-        mode_weights=mode_weights,
+        acceptable_rms_nonuniformity=float(
+            objective_data.get("acceptable_rms_nonuniformity", 0.01)
+        ),
+        rms_power=float(objective_data.get("rms_power", 2.0)),
     )
     config = OptimisationConfig(
         run=run,
@@ -232,6 +209,7 @@ def _read_spot_variables(data: dict) -> SpotVariableConfig:
     return SpotVariableConfig(
         width_enabled=bool(data["width_enabled"]),
         force_circular=bool(data["force_circular"]),
+        share_width_across_beams=bool(data.get("share_width_across_beams", False)),
         minimum_width_x=float(data["minimum_width_x"]),
         maximum_width_x=float(data["maximum_width_x"]),
         minimum_width_y=float(data["minimum_width_y"]),
@@ -240,6 +218,9 @@ def _read_spot_variables(data: dict) -> SpotVariableConfig:
         minimum_rotation_degrees=float(data["minimum_rotation_degrees"]),
         maximum_rotation_degrees=float(data["maximum_rotation_degrees"]),
         supergaussian_index_enabled=bool(data["supergaussian_index_enabled"]),
+        share_supergaussian_index_across_beams=bool(
+            data.get("share_supergaussian_index_across_beams", False)
+        ),
         minimum_supergaussian_index=float(data["minimum_supergaussian_index"]),
         maximum_supergaussian_index=float(data["maximum_supergaussian_index"]),
     )

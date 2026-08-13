@@ -140,6 +140,52 @@ def discover_snapshots(run_directory: Path) -> tuple[Snapshot, ...]:
     return tuple(snapshots)
 
 
+def load_saved_snapshot(directory: Path) -> Snapshot:
+    """Load the single optimization snapshot stored beneath a stable directory."""
+    metadata_paths = list(directory.glob("simulation_*/optimisation_snapshot.json"))
+    if len(metadata_paths) != 1:
+        raise PostprocessingError(
+            f"Expected one saved simulation beneath '{directory}', "
+            f"found {len(metadata_paths)}."
+        )
+    metadata_path = metadata_paths[0]
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        h5_files = list(metadata_path.parent.glob("simulation_results_*.h5"))
+        if len(h5_files) != 1:
+            raise ValueError(f"found {len(h5_files)} result files")
+        return Snapshot(
+            history_index=int(metadata["history_index"]),
+            restart_index=int(metadata["restart_index"]),
+            iteration=int(metadata["iteration"]),
+            h5_path=h5_files[0],
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise PostprocessingError(
+            f"Invalid saved snapshot at '{metadata_path.parent}': {error}."
+        ) from error
+
+
+def discover_restart_snapshots(run_directory: Path) -> tuple[Snapshot, ...]:
+    """Return one saved best snapshot for each completed restart."""
+    root = run_directory / "restart_best_simulations"
+    if not root.is_dir():
+        raise PostprocessingError(
+            f"Restart-best simulations were not found at '{root}'."
+        )
+    snapshots = tuple(
+        load_saved_snapshot(directory)
+        for directory in sorted(
+            root.glob("restart_*"),
+            key=lambda path: int(path.name.removeprefix("restart_")),
+        )
+        if directory.is_dir()
+    )
+    if not snapshots:
+        raise PostprocessingError(f"No restart-best simulations were found in '{root}'.")
+    return snapshots
+
+
 def load_snapshot_data(snapshot: Snapshot):
     with h5py.File(snapshot.h5_path, "r") as handle:
         try:
@@ -198,6 +244,7 @@ def render_frame(
     output_path: Path,
     *,
     dpi: int,
+    design_label: str | None = None,
 ) -> None:
     result, metrics = load_snapshot_data(snapshot)
     figure = plt.figure(figsize=(16, 14), constrained_layout=True)
@@ -224,9 +271,9 @@ def render_frame(
             color=color,
             label=label,
         )
-        fraction_ax.plot(
+        fraction_ax.semilogy(
             iteration,
-            history.deposited_capacity_fraction[selected],
+            _positive(1.0 - history.deposited_capacity_fraction[selected]),
             color=color,
             label=label,
         )
@@ -238,7 +285,9 @@ def render_frame(
         )
     _format_history_axis(objective_ax, "Objective", "Loss")
     _format_history_axis(
-        fraction_ax, "Deposited facility capacity", "Deposited / facility maximum"
+        fraction_ax,
+        "Undeposited facility capacity",
+        r"Shortfall, $1-p_{\mathrm{dep}}$",
     )
     _format_history_axis(
         rms_ax, "Illumination non-uniformity", "RMS / mean", xlabel=True
@@ -251,9 +300,11 @@ def render_frame(
     plot_beam_geometry_mollweide(result, pointing_ax)
     plot_deposition_mollweide(result, deposition_ax)
     plot_mode_power_by_l(metrics, mode_ax)
+    if design_label is None:
+        design_label = f"Global best from restart {snapshot.restart_index}"
     figure.suptitle(
-        f"Optimization history index {history_index} - global best from "
-        f"restart {snapshot.restart_index}, iteration {snapshot.iteration}",
+        f"Optimization history index {history_index} - {design_label}, "
+        f"iteration {snapshot.iteration}",
         fontsize=16,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)

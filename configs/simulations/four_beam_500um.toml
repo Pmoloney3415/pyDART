@@ -1,0 +1,94 @@
+# Structured 4-beam geometry benchmark.
+# Port directions are the vertices of a regular tetrahedron (spherical 2-design).
+# Coordinate source: analytic Platonic-solid coordinates
+
+[simulation]
+index = 4
+output_directory = "results/simulations/"
+save_deposition_data = true
+save_metrics = true
+plot_data = true
+plot_dpi = 200
+surface_quadrature_order = 1
+visibility_smoothing_epsilon = 0.05
+
+[metrics]
+l_max = 12
+
+[target]
+radius = 5.0e-4
+n_polar = 64
+n_azimuthal = 128
+numerical_origin_radius_factor = 10.0
+
+[laser]
+n_beams = 4
+total_incident_power = 20.0e12
+
+# All beams have equal facility capacity, identical circular profiles, and aim
+# through the target centre. Cartesian origins lie on the unit facility sphere.
+
+[[beam]]
+name = "beam_1"
+origin_coordinate_system = "cartesian"
+pointing_coordinate_system = "cartesian"
+origin = [0.577350269190, 0.577350269190, 0.577350269190]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.25000000000000000
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_2"
+origin_coordinate_system = "cartesian"
+pointing_coordinate_system = "cartesian"
+origin = [0.577350269190, -0.577350269190, -0.577350269190]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.25000000000000000
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_3"
+origin_coordinate_system = "cartesian"
+pointing_coordinate_system = "cartesian"
+origin = [-0.577350269190, 0.577350269190, -0.577350269190]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.25000000000000000
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
+[[beam]]
+name = "beam_4"
+origin_coordinate_system = "cartesian"
+pointing_coordinate_system = "cartesian"
+origin = [-0.577350269190, -0.577350269190, 0.577350269190]
+pointing = [0.0, 0.0, 0.0]
+maximum_power_fraction = 0.25000000000000000
+power_fraction_of_maximum = 1.0
+frequency = 5.361e15
+[beam.spot]
+shape = "circular"
+width_x = 200e-6
+width_y = 200e-6
+supergaussian_index = 2.0
+rotation = 0.0
+
