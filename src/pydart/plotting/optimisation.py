@@ -41,7 +41,7 @@ def plot_optimisation_history(history: Sequence[IterationRecord]):
         axes[1, 0].loglog(
             iteration,
             _positive_for_log(
-                [record.deposited_capacity_fraction for record in records]
+                [1.0 - record.deposited_capacity_fraction for record in records]
             ),
             marker=".",
             alpha=0.75,
@@ -104,9 +104,9 @@ def plot_optimisation_history(history: Sequence[IterationRecord]):
         ylabel="RMS / mean",
     )
     axes[1, 0].set(
-        title="Deposited facility capacity",
+        title="Undeposited facility capacity",
         xlabel="Accepted iteration + 1",
-        ylabel="Deposited / facility maximum",
+        ylabel=r"Shortfall, $1-p_{\mathrm{dep}}$",
     )
     axes[1, 1].set(
         title="Gradient convergence",

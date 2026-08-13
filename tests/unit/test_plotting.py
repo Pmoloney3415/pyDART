@@ -95,7 +95,7 @@ def test_mode_power_omits_monopole(results_and_metrics) -> None:
 
 
 def test_optimisation_history_creates_figure() -> None:
-    def record(restart, iteration, objective):
+    def record(restart, iteration, objective, deposited_fraction):
         return IterationRecord(
             restart_index=restart,
             iteration=iteration,
@@ -107,21 +107,26 @@ def test_optimisation_history_creates_figure() -> None:
             rms_ratio_power=objective * 0.6,
             deposition_contribution=objective * 0.1,
             rms_nonuniformity=objective * 0.5,
-            deposited_capacity_fraction=0.9,
+            deposited_capacity_fraction=deposited_fraction,
             gradient_norm=objective * 2.0,
             projected_gradient_norm=objective,
             design=np.zeros(2),
         )
 
     history = (
-        record(0, 0, 1.0),
-        record(0, 1, 0.2),
-        record(1, 0, 2.0),
-        record(1, 1, 0.5),
+        record(0, 0, 1.0, 0.9),
+        record(0, 1, 0.2, 0.99),
+        record(1, 0, 2.0, 0.8),
+        record(1, 1, 0.5, 1.0),
     )
     figure = plot_optimisation_history(history)
 
     assert figure.axes
+    shortfall_axis = figure.axes[3]
+    assert shortfall_axis.get_yscale() == "log"
+    assert "1-p" in shortfall_axis.get_ylabel()
+    np.testing.assert_allclose(shortfall_axis.lines[0].get_ydata(), [0.1, 0.01])
+    assert np.all(shortfall_axis.lines[1].get_ydata() > 0.0)
     plt.close(figure)
 
 

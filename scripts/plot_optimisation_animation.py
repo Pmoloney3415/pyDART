@@ -271,9 +271,9 @@ def render_frame(
             color=color,
             label=label,
         )
-        fraction_ax.plot(
+        fraction_ax.semilogy(
             iteration,
-            history.deposited_capacity_fraction[selected],
+            _positive(1.0 - history.deposited_capacity_fraction[selected]),
             color=color,
             label=label,
         )
@@ -285,7 +285,9 @@ def render_frame(
         )
     _format_history_axis(objective_ax, "Objective", "Loss")
     _format_history_axis(
-        fraction_ax, "Deposited facility capacity", "Deposited / facility maximum"
+        fraction_ax,
+        "Undeposited facility capacity",
+        r"Shortfall, $1-p_{\mathrm{dep}}$",
     )
     _format_history_axis(
         rms_ax, "Illumination non-uniformity", "RMS / mean", xlabel=True
