@@ -52,6 +52,7 @@ class SurfaceVariableConfig:
 class SpotVariableConfig:
     width_enabled: bool
     force_circular: bool
+    share_width_across_beams: bool
     minimum_width_x: float
     maximum_width_x: float
     minimum_width_y: float
@@ -60,6 +61,7 @@ class SpotVariableConfig:
     minimum_rotation_degrees: float
     maximum_rotation_degrees: float
     supergaussian_index_enabled: bool
+    share_supergaussian_index_across_beams: bool
     minimum_supergaussian_index: float
     maximum_supergaussian_index: float
 
@@ -207,6 +209,7 @@ def _read_spot_variables(data: dict) -> SpotVariableConfig:
     return SpotVariableConfig(
         width_enabled=bool(data["width_enabled"]),
         force_circular=bool(data["force_circular"]),
+        share_width_across_beams=bool(data.get("share_width_across_beams", False)),
         minimum_width_x=float(data["minimum_width_x"]),
         maximum_width_x=float(data["maximum_width_x"]),
         minimum_width_y=float(data["minimum_width_y"]),
@@ -215,6 +218,9 @@ def _read_spot_variables(data: dict) -> SpotVariableConfig:
         minimum_rotation_degrees=float(data["minimum_rotation_degrees"]),
         maximum_rotation_degrees=float(data["maximum_rotation_degrees"]),
         supergaussian_index_enabled=bool(data["supergaussian_index_enabled"]),
+        share_supergaussian_index_across_beams=bool(
+            data.get("share_supergaussian_index_across_beams", False)
+        ),
         minimum_supergaussian_index=float(data["minimum_supergaussian_index"]),
         maximum_supergaussian_index=float(data["maximum_supergaussian_index"]),
     )

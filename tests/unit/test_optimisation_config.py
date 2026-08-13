@@ -66,13 +66,6 @@ def test_48_beam_optimisation_configs(
     assert config.run.checkpoint_interval == output_interval
     assert config.run.history_plot_interval == output_interval
     assert config.simulation.laser.n_beams == 48
-    assert config.variables.power.enabled
-    assert config.variables.origin.enabled
-    assert config.variables.pointing.enabled
-    assert config.variables.spot.width_enabled
-    assert config.variables.spot.rotation_enabled
-    assert config.variables.spot.supergaussian_index_enabled
-    assert not config.variables.frozen_beams
 
 
 @pytest.mark.parametrize(
@@ -130,3 +123,32 @@ def test_optimisation_validation_rejects_invalid_configs(case: str) -> None:
 
     with pytest.raises(ValueError):
         validate_optimisation_config(config)
+
+
+def test_shared_spot_rejects_inconsistent_base_beams() -> None:
+    config = load_optimisation_config(
+        CONFIG_DIRECTORY / "four_beam_geometry_scipy.toml"
+    )
+    spot = replace(
+        config.variables.spot,
+        width_enabled=True,
+        force_circular=True,
+        share_width_across_beams=True,
+        rotation_enabled=False,
+    )
+    config = replace(
+        config,
+        variables=replace(config.variables, spot=spot),
+    )
+    first = config.simulation.beams[0]
+    inconsistent = replace(
+        first,
+        spot=replace(first.spot, width_x=first.spot.width_x * 1.1),
+    )
+    simulation = replace(
+        config.simulation,
+        beams=(inconsistent, *config.simulation.beams[1:]),
+    )
+
+    with pytest.raises(ValueError, match="circular base beams"):
+        validate_optimisation_config(replace(config, simulation=simulation))

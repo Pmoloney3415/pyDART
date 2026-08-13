@@ -38,6 +38,7 @@ maximum_angular_displacement_degrees = 80.0
 
 [variables.spot]
 width_enabled = true
+share_width_across_beams = false
 force_circular = false
 minimum_width_x = 100e-6
 maximum_width_x = 600e-6
@@ -47,6 +48,7 @@ rotation_enabled = true
 minimum_rotation_degrees = 0.0
 maximum_rotation_degrees = 180.0
 supergaussian_index_enabled = true
+share_supergaussian_index_across_beams = false
 minimum_supergaussian_index = 1.5
 maximum_supergaussian_index = 8.0
 

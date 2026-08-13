@@ -22,6 +22,7 @@ class ParameterBlock:
     stop: int
     beam_indices: tuple[int, ...]
     components_per_beam: int
+    shared_across_beams: bool = False
 
 
 @jax.tree_util.register_pytree_node_class
@@ -117,6 +118,9 @@ class OptimisationProblem:
         beam_names = self.base_simulation.beams.names
         for block in self._blocks:
             components = component_names[block.name]
+            if block.shared_across_beams:
+                names.extend(f"shared_spot.{component}" for component in components)
+                continue
             for beam_index in block.beam_indices:
                 names.extend(
                     f"{beam_names[beam_index]}.{component}" for component in components
@@ -202,6 +206,10 @@ class OptimisationProblem:
                     values[:, 1], spot.minimum_width_y, spot.maximum_width_y
                 )
                 selected_widths = jnp.stack((width_x, width_y), axis=-1)
+            if block.shared_across_beams:
+                selected_widths = jnp.broadcast_to(
+                    selected_widths, (len(self._active_indices), 2)
+                )
             widths = widths.at[active].set(selected_widths)
         block = self._find_block("rotation")
         if block is not None:
@@ -220,13 +228,16 @@ class OptimisationProblem:
         if block is not None:
             values = self._block_values(design, block)[:, 0]
             spot = variables.spot
-            indices_sg = indices_sg.at[active].set(
-                _linear(
-                    values,
-                    spot.minimum_supergaussian_index,
-                    spot.maximum_supergaussian_index,
-                )
+            selected_indices = _linear(
+                values,
+                spot.minimum_supergaussian_index,
+                spot.maximum_supergaussian_index,
             )
+            if block.shared_across_beams:
+                selected_indices = jnp.broadcast_to(
+                    selected_indices, (len(self._active_indices),)
+                )
+            indices_sg = indices_sg.at[active].set(selected_indices)
 
         return BeamParameters(
             physical_origins=origins,
@@ -298,16 +309,15 @@ class OptimisationProblem:
 
     @staticmethod
     def _block_values(design: Array, block: ParameterBlock) -> Array:
-        return design[block.start : block.stop].reshape(
-            len(block.beam_indices), block.components_per_beam
-        )
+        rows = 1 if block.shared_across_beams else len(block.beam_indices)
+        return design[block.start : block.stop].reshape(rows, block.components_per_beam)
 
     def _build_layout(self) -> tuple[tuple[ParameterBlock, ...], list[float]]:
         blocks: list[ParameterBlock] = []
         initial: list[float] = []
         active = self._active_indices
 
-        def add(name: str, values: Array) -> None:
+        def add(name: str, values: Array, *, shared_across_beams: bool = False) -> None:
             flat = jnp.asarray(values).reshape(-1).tolist()
             start = len(initial)
             initial.extend(float(value) for value in flat)
@@ -317,7 +327,8 @@ class OptimisationProblem:
                     start,
                     len(initial),
                     active,
-                    len(flat) // len(active),
+                    len(flat) if shared_across_beams else len(flat) // len(active),
+                    shared_across_beams,
                 )
             )
 
@@ -353,12 +364,26 @@ class OptimisationProblem:
                 widths[:, 0], spot.minimum_width_x, spot.maximum_width_x
             )
             if spot.force_circular:
-                add("spot_width", x[:, None])
+                values = x[:, None]
+                if spot.share_width_across_beams:
+                    values = values[:1]
+                add(
+                    "spot_width",
+                    values,
+                    shared_across_beams=spot.share_width_across_beams,
+                )
             else:
                 y = _inverse_linear(
                     widths[:, 1], spot.minimum_width_y, spot.maximum_width_y
                 )
-                add("spot_width_xy", jnp.stack((x, y), axis=-1))
+                values = jnp.stack((x, y), axis=-1)
+                if spot.share_width_across_beams:
+                    values = values[:1]
+                add(
+                    "spot_width_xy",
+                    values,
+                    shared_across_beams=spot.share_width_across_beams,
+                )
         if spot.rotation_enabled:
             degrees = jnp.rad2deg(self._baseline.spot_rotations[active_array])
             add(
@@ -370,13 +395,17 @@ class OptimisationProblem:
                 )[:, None],
             )
         if spot.supergaussian_index_enabled:
+            values = _inverse_linear(
+                self._baseline.supergaussian_indices[active_array],
+                spot.minimum_supergaussian_index,
+                spot.maximum_supergaussian_index,
+            )[:, None]
+            if spot.share_supergaussian_index_across_beams:
+                values = values[:1]
             add(
                 "supergaussian_index",
-                _inverse_linear(
-                    self._baseline.supergaussian_indices[active_array],
-                    spot.minimum_supergaussian_index,
-                    spot.maximum_supergaussian_index,
-                )[:, None],
+                values,
+                shared_across_beams=(spot.share_supergaussian_index_across_beams),
             )
         return tuple(blocks), initial
 

@@ -17,7 +17,7 @@ archive_previous_best_simulations = false
 [optimisation.restarts]
 number = 8
 # Preserve the structured reference as restart 1; the other seven are random.
-include_base_design = true
+include_base_design = false
 random_seed = 20260812
 
 [variables]
@@ -26,7 +26,7 @@ frozen_beams = []
 # All supported beam parameters are free, with spot ellipticity and rotation
 # disabled so every optimized spot remains circular.
 [variables.power]
-enabled = true
+enabled = false
 minimum_fraction_of_maximum = 0.0
 maximum_fraction_of_maximum = 1.0
 
@@ -35,12 +35,13 @@ enabled = true
 constraint = "unconstrained"
 
 [variables.pointing]
-enabled = true
+enabled = false
 constraint = "unconstrained"
-maximum_angular_displacement_degrees = 80.0
+maximum_angular_displacement_degrees = 50.0
 
 [variables.spot]
 width_enabled = true
+share_width_across_beams = true
 force_circular = true
 minimum_width_x = 100e-6
 maximum_width_x = 600e-6
@@ -50,11 +51,12 @@ rotation_enabled = false
 minimum_rotation_degrees = 0.0
 maximum_rotation_degrees = 180.0
 supergaussian_index_enabled = true
-minimum_supergaussian_index = 1.5
+share_supergaussian_index_across_beams = true
+minimum_supergaussian_index = 2.0
 maximum_supergaussian_index = 8.0
 
 [objective]
-deposition_log_weight = 100.0
+deposition_log_weight = 10.0
 deposition_log_epsilon = 1.0e-8
 acceptable_rms_nonuniformity = 0.01
 rms_power = 2.0

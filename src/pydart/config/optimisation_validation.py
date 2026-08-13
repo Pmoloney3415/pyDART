@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 if TYPE_CHECKING:
     from pydart.config.optimisation_config import (
         OptimisationConfig,
@@ -68,6 +70,32 @@ def validate_optimisation_config(config: OptimisationConfig) -> None:
         raise ValueError("Rotation bounds are reversed.")
     if spot.force_circular and spot.rotation_enabled:
         raise ValueError("Rotation cannot be optimized for forced-circular spots.")
+    active_beams = tuple(
+        beam
+        for beam in config.simulation.beams
+        if beam.name not in config.variables.frozen_beams
+    )
+    if spot.width_enabled and spot.share_width_across_beams:
+        widths = np.asarray(
+            [(beam.spot.width_x, beam.spot.width_y) for beam in active_beams]
+        )
+        if spot.force_circular and not np.allclose(widths[:, 0], widths[:, 1]):
+            raise ValueError(
+                "Shared forced-circular spot widths require circular base beams."
+            )
+        compared_widths = widths[:, :1] if spot.force_circular else widths
+        if not np.allclose(compared_widths, compared_widths[0]):
+            raise ValueError(
+                "Shared spot widths require identical base widths on all "
+                "non-frozen beams."
+            )
+    if spot.supergaussian_index_enabled and spot.share_supergaussian_index_across_beams:
+        indices = np.asarray([beam.spot.supergaussian_index for beam in active_beams])
+        if not np.allclose(indices, indices[0]):
+            raise ValueError(
+                "A shared super-Gaussian index requires identical base indices "
+                "on all non-frozen beams."
+            )
     if not any(
         (
             power.enabled,

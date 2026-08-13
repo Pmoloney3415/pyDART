@@ -17,6 +17,31 @@ CONFIG_DIRECTORY = Path(__file__).parents[2] / "configs" / "optimisations"
 
 def _six_beam_problem(*, coarse: bool = False) -> OptimisationProblem:
     config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
+    variables = replace(
+        config.variables,
+        power=replace(config.variables.power, enabled=True),
+        origin=replace(
+            config.variables.origin,
+            enabled=True,
+            constraint="unconstrained",
+        ),
+        pointing=replace(
+            config.variables.pointing,
+            enabled=True,
+            constraint="bounded",
+            maximum_angular_displacement_degrees=80.0,
+        ),
+        spot=replace(
+            config.variables.spot,
+            width_enabled=True,
+            force_circular=False,
+            share_width_across_beams=False,
+            rotation_enabled=True,
+            supergaussian_index_enabled=True,
+            share_supergaussian_index_across_beams=False,
+        ),
+    )
+    config = replace(config, variables=variables)
     if coarse:
         simulation = replace(
             config.simulation,
@@ -98,6 +123,57 @@ def test_bounds_decode_to_physical_scalar_bounds() -> None:
     )
 
 
+def test_shared_circular_spot_uses_two_variables_for_all_beams() -> None:
+    config = load_optimisation_config(
+        CONFIG_DIRECTORY / "twelve_beam_geometry_scipy.toml"
+    )
+    variables = replace(
+        config.variables,
+        power=replace(config.variables.power, enabled=True),
+        origin=replace(
+            config.variables.origin,
+            enabled=True,
+            constraint="unconstrained",
+        ),
+        pointing=replace(
+            config.variables.pointing,
+            enabled=True,
+            constraint="unconstrained",
+        ),
+        spot=replace(
+            config.variables.spot,
+            width_enabled=True,
+            force_circular=True,
+            share_width_across_beams=True,
+            rotation_enabled=False,
+            supergaussian_index_enabled=True,
+            share_supergaussian_index_across_beams=True,
+        ),
+    )
+    config = replace(config, variables=variables)
+    problem = OptimisationProblem(config)
+    beam_count = config.simulation.laser.n_beams
+    blocks = {block.name: block for block in problem.parameter_blocks}
+
+    assert problem.n_parameters == 7 * beam_count + 2
+    assert blocks["spot_width"].shared_across_beams
+    assert blocks["supergaussian_index"].shared_across_beams
+    assert "shared_spot.width" in problem.parameter_names
+    assert "shared_spot.index" in problem.parameter_names
+
+    low = problem.beam_parameters(problem.lower_bounds)
+    high = problem.beam_parameters(problem.upper_bounds)
+    spot = config.variables.spot
+    np.testing.assert_allclose(low.spot_widths, spot.minimum_width_x)
+    np.testing.assert_allclose(high.spot_widths, spot.maximum_width_x)
+    np.testing.assert_allclose(
+        low.supergaussian_indices, spot.minimum_supergaussian_index
+    )
+    np.testing.assert_allclose(
+        high.supergaussian_indices, spot.maximum_supergaussian_index
+    )
+
+
 def test_origin_motion_transports_unadjusted_pointing() -> None:
     problem = _six_beam_problem()
     design = problem.initial_parameters
@@ -157,7 +233,7 @@ def test_bounded_pointing_retains_radial_gradient_outside_unit_circle() -> None:
 
 
 def test_frozen_beam_is_absent_from_design_and_unchanged() -> None:
-    config = load_optimisation_config(CONFIG_DIRECTORY / "six_beam_design_scipy.toml")
+    config = _six_beam_problem().config
     unfrozen_problem = OptimisationProblem(config)
     variables = replace(config.variables, frozen_beams=("beam_1",))
     problem = OptimisationProblem(replace(config, variables=variables))

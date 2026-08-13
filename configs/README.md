@@ -14,6 +14,13 @@ bounds, optional frozen beam names, and objective weights. Physical port
 origins remain at their configured radius while their angular positions may
 be bounded or unconstrained on the facility sphere.
 
+Within `[variables.spot]`, `share_width_across_beams = true` replaces the
+per-beam width variables with one shared width (or one shared x/y pair when
+spots are not forced circular). Likewise,
+`share_supergaussian_index_across_beams = true` uses one shared profile index.
+Sharing applies across all non-frozen beams and requires their base values to
+be identical so that the base design remains exactly representable.
+
 `visibility_smoothing_epsilon` regularizes the surface deposition map used for
 RMS non-uniformity and spherical harmonics. Deposited power and deposited
 fraction are calculated separately with exact hard visibility, so smoothing
@@ -36,7 +43,8 @@ final outputs).
 
 The `four`, `twelve`, `sixteen`, and `twenty` beam simulation decks are
 structured geometry benchmarks. Their matching `*_beam_geometry_scipy.toml`
-decks optimize all beam parameters while forcing circular spots, and include
+decks optimize all beam parameters while forcing one circular spot profile
+shared by every beam, and include
 the structured base layout as the first of eight restarts. The 4, 12,
 and 20 beam layouts use Platonic-solid vertices; the 16 beam layout is the
 Hardin-Sloane 16-point spherical 5-design.
